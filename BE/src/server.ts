@@ -2,82 +2,73 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { z } from 'zod';
-import OpenAI from 'openai';
+import fetch from 'node-fetch';
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// --- init provider (OpenAI contoh) ---
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// --- Konfigurasi API Key ---
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
-// --- schema request (validasi input dari FE) ---
+if (!GEMINI_API_KEY) {
+  console.error("❗ GEMINI_API_KEY tidak ditemukan di .env");
+  process.exit(1);
+}
+
+// --- Validasi input ---
 const AiRequest = z.object({
-  task: z.enum(['summarize','classify','chat','extract']).default('chat'),
   input: z.string().min(1),
   system: z.string().optional(),
   temperature: z.number().min(0).max(2).optional()
 });
 
-// --- endpoint non-stream ---
+// --- Endpoint utama ---
 app.post('/api/ai', async (req, res) => {
   const parse = AiRequest.safeParse(req.body);
-  if (!parse.success) return res.status(400).json({ error: parse.error.issues });
+  if (!parse.success) {
+    return res.status(400).json({ ok: false, error: parse.error.issues });
+  }
 
-  const { input, system, temperature=0.7 } = parse.data;
+  const { input, system, temperature = 0.7 } = parse.data;
 
   try {
-    const resp = await client.responses.create({
-      model: process.env.OPENAI_MODEL!,
-      temperature,
-      input: [
-        ...(system ? [{ role: 'system', content: system }] : []),
-        { role: 'user', content: input }
-      ]
+    // --- Request ke Gemini API ---
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+    const body = {
+      contents: [
+        ...(system ? [{ role: 'system', parts: [{ text: system }] }] : []),
+        { role: 'user', parts: [{ text: input }] }
+      ],
+      generationConfig: { temperature }
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': GEMINI_API_KEY
+      },
+      body: JSON.stringify(body)
     });
 
-    // keluarkan teks pertama
-    const text = resp.output_text ?? '';
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('❌ Gemini API Error:', data);
+      return res.status(response.status).json({ ok: false, error: data });
+    }
+
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '(no text)';
     res.json({ ok: true, text });
-  } catch (e:any) {
-    console.error(e);
-    res.status(500).json({ ok:false, error: e.message ?? 'AI error' });
+  } catch (e: any) {
+    console.error('🔥 Server Error:', e);
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 
-// --- endpoint streaming (SSE) ---
-app.get('/api/ai/stream', async (req, res) => {
-  const input = (req.query.q as string) || '';
-  if (!input) return res.status(400).end('query ?q= kosong');
-
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive'
-  });
-
-  try {
-    const stream = await client.responses.stream({
-      model: process.env.OPENAI_MODEL!,
-      input: [{ role: 'user', content: input }]
-    });
-
-    stream.on('text', (chunk: string) => {
-      res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-    });
-
-    stream.on('end', () => res.end());
-    stream.on('error', (err: any) => {
-      console.error(err);
-      res.write(`data: ${JSON.stringify({ error: 'stream_error' })}\n\n`);
-      res.end();
-    });
-  } catch (e:any) {
-    console.error(e);
-    res.end();
-  }
-});
-
-app.listen(process.env.PORT, () =>
-  console.log(`AI backend running on :${process.env.PORT}`)
-);
+// --- Jalankan server ---
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`✅ Gemini AI backend running on port ${PORT}`));
