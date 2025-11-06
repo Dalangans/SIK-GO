@@ -1,0 +1,53 @@
+.animated-background {
+  background: var(--black-primary);
+  min-height: 100vh;
+}
+
+.glass-container {
+  background: var(--black-secondary);
+  min-height: 100vh;
+}
+
+.content-wrapper {
+  position: relative;
+  z-index: 1;
+}
+
+.main-content {
+  background: var(--black-light);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 20px var(--shadow-color);
+  margin: 80px 20px 20px;
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+}
+
+.overlay-pattern {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(45deg, var(--blue-accent) 1%, transparent 1%),
+    linear-gradient(-45deg, var(--blue-accent) 1%, transparent 1%);
+  opacity: 0.03;
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+
+/* Untuk membuat cards dan elemen UI lainnya lebih sesuai dengan background baru */
+.card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(31, 38, 135, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 40px rgba(31, 38, 135, 0.15);
+}

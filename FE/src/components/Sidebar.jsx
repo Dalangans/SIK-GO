@@ -1,7 +1,22 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
-function Sidebar({ isOpen, onClose }) {
+const Sidebar = ({ isOpen, onClose }) => {
+  const { isAuthenticated, user, logout } = useContext(AuthContext);
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
+
+  const menuItems = [
+    { path: '/', label: 'Home', icon: '🏠' },
+    { path: '/about', label: 'About', icon: 'ℹ️' },
+    ...(isAuthenticated ? [
+      { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+      { path: '/profile', label: 'Profile', icon: '👤' }
+    ] : [])
+  ];
+
   const overlayStyle = {
     position: 'fixed',
     top: 0,
@@ -34,23 +49,39 @@ function Sidebar({ isOpen, onClose }) {
   };
 
   return (
-    <>
-      <div style={overlayStyle} onClick={onClose} />
-      <div style={sidebarStyle}>
-        <div style={{ paddingTop: '30px' }}>
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={menuItemStyle}>Home</div>
-          </Link>
-          <Link to="/about" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={menuItemStyle}>About Us</div>
-          </Link>
-          <Link to="/settings" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={menuItemStyle}>Settings</div>
-          </Link>
-        </div>
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar-header">
+        <h3 className="title-section">SIK-GO</h3>
+        <button className="close-btn" onClick={onClose}>×</button>
       </div>
-    </>
+
+      {isAuthenticated && (
+        <div className="user-info">
+          <div className="user-avatar">
+            {user?.name?.charAt(0).toUpperCase()}
+          </div>
+          <div className="user-details">
+            <span className="subtitle">{user?.name}</span>
+            <span className="text-caption">Admin</span>
+          </div>
+        </div>
+      )}
+
+      <nav className="sidebar-nav">
+        {menuItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`nav-item nav-text ${isActive(item.path) ? 'active' : ''}`}
+            onClick={onClose}
+          >
+            <span className="nav-icon">{item.icon}</span>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
-}
+};
 
 export default Sidebar;

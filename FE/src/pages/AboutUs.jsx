@@ -1,45 +1,79 @@
 import React from 'react';
 
-function AboutUs() {
-  const pageStyle = {
-    height: '100vh',
-    background: 'linear-gradient(90deg, #00eaff 0%, #00d6e6 30%, #00bfae 60%, #7fdad3ff 80%, #ffffff 100%)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center'
-  };
-
-  const titleStyle = {
-    color: '#333',
-    fontSize: '36px',
-    fontFamily: 'Arial',
-    fontWeight: 'bold',
-    margin: '30px 0'
-  };
-
-  const contentStyle = {
-    width: '80%',
-    maxWidth: '800px',
-    backgroundColor: 'rgba(255, 255, 255, 0.6)', // made more transparent
-    borderRadius: '40px',  // increased from 8px
-    padding: '30px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    fontSize: '16px',
-    lineHeight: '1.6',
-    color: '#333',
-    fontFamily: 'Arial'
+const AboutUs = () => {
+  const styles = {
+    container: {
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: '2rem',
+    },
+    header: {
+      textAlign: 'center',
+      marginBottom: '3rem',
+      position: 'relative',
+    },
+    accentLine: {
+      width: '60px',
+      height: '4px',
+      background: 'linear-gradient(90deg, var(--blue-accent), var(--blue-light))',
+      margin: '1rem auto',
+      borderRadius: '2px',
+    },
+    card: {
+      background: 'var(--black-light)',
+      borderRadius: '16px',
+      padding: '2.5rem',
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+      border: '1px solid var(--border-color)',
+    },
+    section: {
+      paddingTop: '1.5rem',
+      marginTop: '1.5rem',
+      borderTop: '1px solid var(--border-color)',
+    },
+    text: {
+      color: 'var(--text-secondary)',
+      lineHeight: 1.6,
+      marginTop: '1rem',
+    }
   };
 
   return (
-    <div style={pageStyle}>
-      <h1 style={titleStyle}>About Us</h1>
-      <div style={contentStyle}>
-        <p>
-          Sik-Go is a student team from the Faculty of Engineering, Universitas Indonesia, dedicated to developing intelligent systems powered by artificial intelligence. Our founding members are third-year Computer Engineering undergraduates with multidisciplinary expertise in software engineering, data science, and project management. Our team is currently developing a website that enables users to book rooms within the Faculty of Engineering, Universitas Indonesia, and integrates an AI-powered document scanning feature to ensure compliance with the required formats. As aspiring professionals, we are committed to creating valuable digital solutions for our peers and warmly welcome your support on this journey.
-        </p>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 className="title-hero">About Us</h1>
+        <div style={styles.accentLine}></div>
+      </div>
+
+      <div style={styles.card}>
+        <div>
+          <h2 className="subtitle">SIK-GO Team</h2>
+          <p style={styles.text}>
+            SIK-GO is a student team from the Faculty of Engineering, Universitas Indonesia, 
+            dedicated to developing intelligent systems powered by artificial intelligence.
+          </p>
+        </div>
+
+        <div style={styles.section}>
+          <h3>Our Mission</h3>
+          <p style={styles.text}>
+            We're developing a website that enables users to book rooms within the Faculty 
+            of Engineering, Universitas Indonesia, and integrates an AI-powered document 
+            scanning feature to ensure compliance with the required formats.
+          </p>
+        </div>
+
+        <div style={styles.section}>
+          <h3>Our Team</h3>
+          <p style={styles.text}>
+            Our founding members are third-year Computer Engineering undergraduates with 
+            multidisciplinary expertise in software engineering, data science, and project 
+            management.
+          </p>
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default AboutUs;
