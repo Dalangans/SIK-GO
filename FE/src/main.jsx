@@ -1,10 +1,5 @@
-import React from 'react';
+import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
+import App from './App.jsx';
 
-// Add basic styles to body
-document.body.style.margin = '0';
-document.body.style.height = '100vh';
-document.body.style.backgroundColor = 'cyan';
-
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>);
