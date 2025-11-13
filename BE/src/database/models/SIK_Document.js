@@ -1,23 +1,34 @@
 const mongoose = require('mongoose');
 
 const SIK_DocumentSchema = new mongoose.Schema({
-  docId: {
-    type: Number,
-    required: true,
-    unique: true
+  // Siapa yang upload (relasi ke User)
+  user: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  // Nama asli file
+  fileName: {
+    type: String,
+    required: true
+  },
+  // Lokasi penyimpanan file di server (penting!)
+  filePath: {
+    type: String,
+    required: true
+  },
+  // Tipe file (pdf, docx, dll)
+  mimeType: {
+    type: String
   },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
-  proposalRef: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'Proposal',
-    required: true
-  },
-  generateDoc: function() {
-    // Implement document generation logic
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 

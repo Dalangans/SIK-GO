@@ -10,12 +10,16 @@ exports.getRoomById = async (roomId) => {
 
 exports.checkRoomAvailability = async (roomId, date) => {
   const room = await Room.findOne({ roomId });
-  return room ? room.checkAvailability(date) : false;
+
+  if (!room) {
+    throw new Error('Room not found');
+  }
+  return room.checkAvailability(date);
 };
 
 exports.updateRoom = async (roomId, updateData) => {
   return await Room.findOneAndUpdate({ roomId }, updateData, {
-    new: true,
-    runValidators: true
+    new: true,            
+    runValidators: true  
   });
 };

@@ -13,15 +13,15 @@ const RoomSchema = new mongoose.Schema({
   isAvailable: {
     type: Boolean,
     default: true
-  },
-  checkAvailability: function(date) {
-    // Implement room availability check logic
-    return this.isAvailable;
-  },
-  validate: function() {
-    // Implement room validation logic
-    return true;
   }
 });
+
+RoomSchema.methods.checkAvailability = function(date) {
+  return this.isAvailable;
+};
+
+RoomSchema.methods.customValidate = function() {
+  return true;
+};
 
 module.exports = mongoose.model('Room', RoomSchema);

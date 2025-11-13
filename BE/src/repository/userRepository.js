@@ -6,11 +6,6 @@ const userRepository = {
         return await User.find();
     },
 
-    // Get user by ID with enrolled courses
-    getUserWithCourses: async (userId) => {
-        return await User.findById(userId).populate('enrolledCourses');
-    },
-
     // Create new user
     createUser: async (userData) => {
         return await User.create(userData);

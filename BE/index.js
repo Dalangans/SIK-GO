@@ -5,7 +5,6 @@ const cors = require('cors');
 const authRoutes = require('./src/route/authRoutes');
 const userRoutes = require('./src/route/userRoutes');
 const roomRoutes = require('./src/route/roomRoutes');
-const proposalRoutes = require('./src/route/proposalRoutes');
 const sikDocumentRoutes = require('./src/route/sikDocumentRoutes');
 const { connectDB } = require('./src/database/connection');
 
@@ -27,7 +26,6 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
-app.use('/api/proposals', proposalRoutes);
 app.use('/api/documents', sikDocumentRoutes);
 
 // Basic route
