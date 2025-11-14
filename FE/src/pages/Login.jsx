@@ -1,12 +1,28 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 export default function Login() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
+  const [registeredSuccess, setRegisteredSuccess] = useState('');
+
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('registered') === '1' || sp.get('success') === 'registered') {
+      setRegisteredSuccess('Your account was created successfully. Please log in.');
+      return;
+    }
+    const flag = sessionStorage.getItem('sikgo_registered_success');
+    if (flag) {
+      setRegisteredSuccess('Your account was created successfully. Please log in.');
+      sessionStorage.removeItem('sikgo_registered_success');
+    }
+  }, [location.search]);
 
   const validate = () => {
     const err = { email: '', password: '' };
@@ -22,10 +38,35 @@ export default function Login() {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    // Simulate async login process
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    alert('Login successful (simulation). Proceed to integrate your API.');
+    try {
+      const envBase = import.meta.env.VITE_API_URL?.trim();
+      const base = (envBase && envBase !== '') ? envBase.replace(/\/+$/,'') : 'http://localhost:3000';
+      const res = await fetch(`${base}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success || !json.token) {
+        setErrors((prev) => ({ ...prev, password: json.error || 'Login failed.' }));
+        return;
+      }
+      // Simpan token & user
+      localStorage.setItem('authToken', json.token);
+      localStorage.setItem('sikgo_user', JSON.stringify({
+        id: json.user.id,
+        email: json.user.email,
+        name: json.user.name,
+        role: json.user.role,
+        fullName: json.user.name
+      }));
+      navigate('/');
+    } catch {
+      setErrors((prev) => ({ ...prev, password: 'Network error. Try again.' }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,8 +74,6 @@ export default function Login() {
       <div className="aurora a1" />
       <div className="aurora a2" />
       <div className="aurora a3" />
-
-      {/* Back di luar card, di kiri atas card */}
       <div className="card-wrap">
         <Link to="/" className="back-btn" aria-label="Go Back Home">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -44,12 +83,17 @@ export default function Login() {
         </Link>
 
         <div className="card" role="region" aria-label="Login Form">
-          {/* removed: .top-actions di dalam card */}
           <div className="brand">
             <img src="/Icon.svg" alt="App Logo" className="brand-icon" />
             <h1>Sign In</h1>
             <p>Please sign in to continue to the dashboard.</p>
           </div>
+
+          {registeredSuccess ? (
+            <div className="notice success" role="status">
+              <strong>{registeredSuccess}</strong>
+            </div>
+          ) : null}
 
           <form onSubmit={onSubmit} noValidate>
             <label htmlFor="email">Email</label>
@@ -85,7 +129,6 @@ export default function Login() {
                 aria-label={showPwd ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPwd((v) => !v)}
               >
-                {/* ...existing eye icons... */}
                 {showPwd ? (
                   <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
                 ) : (
@@ -314,3 +357,4 @@ export default function Login() {
     </div>
   );
 }
+// (Tidak ada perubahan fungsional saat ini karena login masih simulasi)

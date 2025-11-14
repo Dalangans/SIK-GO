@@ -1,15 +1,21 @@
 const userRepository = require('../repository/userRepository');
+const mongoose = require('mongoose');
 
 // Register user
 exports.register = async (req, res) => {
   try {
-    const userData = {
-      name: req.body.name,
-      email: req.body.email,
-      password: req.body.password,
-      role: req.body.role
-    };
+    if (mongoose.connection.readyState === 0) {
+      return res.status(503).json({ success: false, error: 'Database unavailable. Retry later.' });
+    }
+    if (mongoose.connection.readyState === 2) {
+      await mongoose.connection.asPromise(); // tunggu selesai connect
+    }
+    const { name, email, password, role } = req.body || {};
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, error: 'name, email, password required' });
+    }
 
+    const userData = { name, email, password, role };
     const user = await userRepository.createUser(userData);
     sendTokenResponse(user, 201, res);
   } catch (error) {
@@ -23,6 +29,12 @@ exports.register = async (req, res) => {
 // Login use
 exports.login = async (req, res) => {
   try {
+    if (mongoose.connection.readyState === 0) {
+      return res.status(503).json({ success: false, error: 'Database unavailable. Retry later.' });
+    }
+    if (mongoose.connection.readyState === 2) {
+      await mongoose.connection.asPromise();
+    }
     const { email, password } = req.body;
 
     if (!email || !password) {

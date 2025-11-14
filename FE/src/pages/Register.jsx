@@ -1,46 +1,90 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Register() {
-  const [name, setName] = useState('');
+  const navigate = useNavigate();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [pwd, setPwd] = useState('');
-  const [cpwd, setCpwd] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [showCpwd, setShowCpwd] = useState(false);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({ name: '', email: '', pwd: '', cpwd: '' });
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const retryFlag = useRef(false);
 
   const validate = () => {
-    const err = { name: '', email: '', pwd: '', cpwd: '' };
-    if (!name.trim()) err.name = 'Name is required.';
-    if (!email.trim()) err.email = 'Email is required.';
-    else if (!/^\S+@\S+\.\S+$/.test(email)) err.email = 'Invalid email format.';
-    if (!pwd) err.pwd = 'Password is required.';
-    else if (pwd.length < 6) err.pwd = 'Minimum 6 characters.';
-    if (!cpwd) err.cpwd = 'Confirm your password.';
-    else if (cpwd !== pwd) err.cpwd = 'Passwords do not match.';
-    setErrors(err);
-    return !err.name && !err.email && !err.pwd && !err.cpwd;
+    setError('');
+    if (!fullName.trim()) return 'Full name is required.';
+    if (!email.trim()) return 'Email is required.';
+    if (!/^\S+@\S+\.\S+$/.test(email)) return 'Invalid email format.';
+    if (!password) return 'Password is required.';
+    if (password.length < 6) return 'Minimum 6 characters.';
+    return '';
   };
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    const v = validate();
+    if (v) { setError(v); return; }
+
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900));
-    setLoading(false);
-    alert('Registration successful (simulation). Proceed to integrate your API.');
+    try {
+      const envBase = import.meta.env.VITE_API_URL?.trim();
+      const base = (envBase && envBase !== '') ? envBase.replace(/\/+$/,'') : 'http://localhost:3000';
+      const endpoint = `${base}/api/auth/register`;
+      const attempt = async () => {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ name: fullName, email, password })
+        });
+        const json = await res.json().catch(() => ({}));
+        return { res, json };
+      };
+
+      let { res, json } = await attempt();
+
+      if (res.status === 503 && !retryFlag.current) {
+        retryFlag.current = true;
+        setError('Backend connecting to database. Retrying...');
+        await new Promise(r => setTimeout(r, 1500));
+        ({ res, json } = await attempt());
+      }
+
+      if (!res.ok) {
+        console.warn('Register failed:', res.status, json);
+        const rawErr = json.error || json.message || '';
+        const friendly =
+          /buffering timed out/i.test(rawErr)
+            ? 'Database still initializing. Please retry shortly.'
+            : rawErr ||
+              (res.status === 500
+                ? 'Server error. Please check backend logs.'
+                : `Registration failed (status ${res.status}).`);
+        setError(friendly);
+        return;
+      }
+
+      // Berhasil: tampilkan banner sukses dan opsi menuju login
+      setSuccessMsg('Your account was created successfully. Please log in.');
+      // Opsional: buat flag agar login menampilkan banner tanpa query
+      sessionStorage.setItem('sikgo_registered_success','1');
+      setFullName(''); setEmail(''); setPassword('');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="reg-root">
+    <div className="login-root">
       <div className="aurora a1" />
       <div className="aurora a2" />
       <div className="aurora a3" />
 
       <div className="card-wrap">
-        <Link to="/login" className="back-btn" aria-label="Go Back to Login">
+        <Link to="/" className="back-btn" aria-label="Go Back Home">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
           </svg>
@@ -51,109 +95,79 @@ export default function Register() {
           <div className="brand">
             <img src="/Icon.svg" alt="App Logo" className="brand-icon" />
             <h1>Create Account</h1>
-            <p>Sign up to start using the platform.</p>
+            <p>Sign up to start reserving campus facilities.</p>
           </div>
 
+          {successMsg ? (
+            <div className="notice success" role="status">
+              <strong>{successMsg}</strong>
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="submit"
+                  onClick={() => navigate('/login')}
+                  style={{ width: '100%', marginTop: 8 }}
+                >
+                  Go to Login
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {error ? <div className="notice error" role="alert">{error}</div> : null}
+
           <form onSubmit={onSubmit} noValidate>
-            <label htmlFor="name">Full Name</label>
-            <div className={`field ${errors.name ? 'error' : ''}`}>
+            <label htmlFor="fullName">Full Name</label>
+            <div className="field">
               <input
-                id="name"
+                id="fullName"
                 type="text"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                aria-invalid={!!errors.name}
-                aria-describedby={errors.name ? 'name-error' : undefined}
+                placeholder="Your full name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 autoComplete="name"
               />
-              {errors.name ? <span id="name-error" className="hint">{errors.name}</span> : null}
             </div>
 
             <label htmlFor="email">Email</label>
-            <div className={`field ${errors.email ? 'error' : ''}`}>
+            <div className="field">
               <input
                 id="email"
                 type="email"
                 placeholder="name@domain.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? 'email-error' : undefined}
                 autoComplete="email"
               />
-              {errors.email ? <span id="email-error" className="hint">{errors.email}</span> : null}
             </div>
 
-            <label htmlFor="pwd">Password</label>
-            <div className={`field with-icon ${errors.pwd ? 'error' : ''}`}>
+            <label htmlFor="password">Password</label>
+            <div className="field">
               <input
-                id="pwd"
-                type={showPwd ? 'text' : 'password'}
+                id="password"
+                type="password"
                 placeholder="••••••••"
-                value={pwd}
-                onChange={(e) => setPwd(e.target.value)}
-                aria-invalid={!!errors.pwd}
-                aria-describedby={errors.pwd ? 'pwd-error' : undefined}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
               />
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label={showPwd ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPwd(v => !v)}
-              >
-                {showPwd ? (
-                  <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                ) : (
-                  <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7c2 0 3.8-.6 5.2-1.4l2.3 2.3 1.5-1.5-18-18-1.5 1.5 3.2 3.2C3 9 2 12 2 12s3 7 10 7c1.5 0 2.9-.3 4.1-.7l-2.2-2.2A5 5 0 017 12c0-.7.1-1.3.3-1.9L9 12a3 3 0 003 3 3 3 0 001.9-.7l1.4 1.4A4.9 4.9 0 0112 17a5 5 0 01-5-5c0-.5.1-1 .2-1.5l1.7 1.7A3 3 0 0012 15a3 3 0 002.1-.9l1.3 1.3C14.7 16.5 13.5 17 12 17z"/></svg>
-                )}
-              </button>
-              {errors.pwd ? <span id="pwd-error" className="hint">{errors.pwd}</span> : null}
-            </div>
-
-            <label htmlFor="cpwd">Confirm Password</label>
-            <div className={`field with-icon ${errors.cpwd ? 'error' : ''}`}>
-              <input
-                id="cpwd"
-                type={showCpwd ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={cpwd}
-                onChange={(e) => setCpwd(e.target.value)}
-                aria-invalid={!!errors.cpwd}
-                aria-describedby={errors.cpwd ? 'cpwd-error' : undefined}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label={showCpwd ? 'Hide password' : 'Show password'}
-                onClick={() => setShowCpwd(v => !v)}
-              >
-                {showCpwd ? (
-                  <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/></svg>
-                ) : (
-                  <svg viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7c2 0 3.8-.6 5.2-1.4l2.3 2.3 1.5-1.5-18-18-1.5 1.5 3.2 3.2C3 9 2 12 2 12s3 7 10 7c1.5 0 2.9-.3 4.1-.7l-2.2-2.2A5 5 0 017 12c0-.7.1-1.3.3-1.9L9 12a3 3 0 003 3 3 3 0 001.9-.7l1.4 1.4A4.9 4.9 0 0112 17a5 5 0 01-5-5c0-.5.1-1 .2-1.5l1.7 1.7A3 3 0 0012 15a3 3 0 002.1-.9l1.3 1.3C14.7 16.5 13.5 17 12 17z"/></svg>
-                )}
-              </button>
-              {errors.cpwd ? <span id="cpwd-error" className="hint">{errors.cpwd}</span> : null}
             </div>
 
             <button className="submit" type="submit" disabled={loading}>
               {loading ? <span className="spinner" aria-hidden="true" /> : 'Create Account'}
             </button>
-
-            <p className="sub">Already have an account? <Link to="/login" className="link">Sign in</Link></p>
           </form>
+
+          <p className="sub">Already have an account? <Link to="/login" className="link">Sign in</Link></p>
         </div>
       </div>
 
       <style>{`
-        :root { --fg:#e7e8ee; --muted:#a5acc1; --pri1:#8b5cf6; --pri2:#6ee7f9; --border:rgba(255,255,255,0.12); }
+        :root { --fg:#e7e8ee; --muted:#a5acc1; --border:rgba(255,255,255,0.12); }
         * { box-sizing: border-box; }
         html, body, #root { height: 100%; }
         body { margin: 0; background: radial-gradient(1200px 800px at 10% 10%, #1a1f42 0%, #0b0e1e 60%, #060712 100%); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue"; }
-        .reg-root { min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px; position: relative; overflow: hidden; isolation: isolate; }
+        .login-root { min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px; position: relative; overflow: hidden; isolation: isolate; }
         .aurora { position: absolute; inset: -20%; filter: blur(70px); opacity: .35; z-index: -1; transform: translateZ(0); }
         .a1 { background: radial-gradient(circle at 20% 30%, #6ee7f955, transparent 50%); }
         .a2 { background: radial-gradient(circle at 80% 20%, #8b5cf655, transparent 50%); }
@@ -195,6 +209,24 @@ export default function Register() {
 
         .link { color: #93c5fd; text-decoration: none; }
         .link:hover { text-decoration: underline; }
+
+        .notice {
+          margin: 4px 0 14px;
+          padding: 10px 12px;
+          border-radius: 12px;
+          font-size: 13px;
+          line-height: 1.35;
+        }
+        .notice.success {
+          background: rgba(34, 197, 94, 0.12);
+          border: 1px solid rgba(34, 197, 94, 0.35);
+          color: #bbf7d0;
+        }
+        .notice.error {
+          background: rgba(239, 68, 68, 0.12);
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          color: #fecaca;
+        }
 
         @media (max-width: 420px) {
           .card { padding: 22px; }

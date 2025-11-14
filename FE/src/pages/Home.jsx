@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // tambahkan useNavigate
 
 export default function Home() {
@@ -6,7 +6,49 @@ export default function Home() {
   const [preview, setPreview] = useState('');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState('');
+  const [user, setUser] = useState(null);
+  const [fetching, setFetching] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const navigate = useNavigate(); // init navigator
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      navigate('/login', { replace: true });
+      return;
+    }
+    const envBase = import.meta.env.VITE_API_URL?.trim();
+    const base = (envBase && envBase !== '') ? envBase.replace(/\/+$/,'') : 'http://localhost:3000';
+    (async () => {
+      try {
+        const res = await fetch(`${base}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include'
+        });
+        const json = await res.json().catch(()=>({}));
+        if (!res.ok || !json.success) {
+          setFetchError(json.error || 'Failed to load user.');
+          // token mungkin invalid -> bersihkan & redirect
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('sikgo_user');
+          setTimeout(() => navigate('/login', { replace: true }), 1000);
+          return;
+        }
+        setUser(json.data);
+        localStorage.setItem('sikgo_user', JSON.stringify({
+          id: json.data._id,
+          email: json.data.email,
+          name: json.data.name,
+          role: json.data.role,
+          fullName: json.data.name
+        }));
+      } catch {
+        setFetchError('Network error while fetching user.');
+      } finally {
+        setFetching(false);
+      }
+    })();
+  }, [navigate]);
 
   const handleFile = (f) => {
     if (!f) return;
@@ -51,6 +93,25 @@ OCR text will appear here after integrating your API.`);
     setResult((prev) => (prev?.trim() ? prev + '\nSubmit complete (simulation).' : 'Submit complete (simulation).'));
   };
 
+  if (fetching) {
+    return <div style={{padding:40,color:'#e6efff',fontFamily:'sans-serif'}}>Loading user...</div>;
+  }
+  if (fetchError && !user) {
+    return <div style={{padding:40,color:'#f87171',fontFamily:'sans-serif'}}>Error: {fetchError}</div>;
+  }
+
+  // Determine display name: prefer fullName, then name, then derive from email
+  const displayName =
+    user.fullName ||
+    user.name ||
+    (user.email ? user.email.split('@')[0].replace(/[._-]/g, ' ') : 'User');
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('sikgo_user');
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="home-root">
       <nav className="topbar">
@@ -62,12 +123,25 @@ OCR text will appear here after integrating your API.`);
           <Link to="/">Home</Link>
           <Link to="/rooms">Rooms</Link>
           <Link to="/about">About Us</Link>
-          <Link to="/login" className="login-btn">Log In</Link>
+          {user ? (
+            <>
+              <span className="welcome">Welcome back, {displayName}</span>
+              <button type="button" className="logout-btn" onClick={handleLogout}>Logout</button>
+            </>
+          ) : (
+            <Link to="/login" className="login-btn">Log In</Link>
+          )}
         </div>
       </nav>
 
       <header className="hero">
-        <h1>Welcome to <span className="nowrap">SIK‑GO</span></h1>
+        <h1>
+          {user ? (
+            <>Welcome back, <span className="nowrap">{displayName}</span></>
+          ) : (
+            <>Welcome to <span className="nowrap">SIK‑GO</span></>
+          )}
+        </h1>
         <p>A platform to manage room reservations and FT UI information seamlessly.</p>
       </header>
 
@@ -181,6 +255,12 @@ OCR text will appear here after integrating your API.`);
           box-shadow:0 6px 20px -4px rgba(139,92,246,.45); transition:transform .15s, box-shadow .3s;
         }
         .login-btn:hover { transform:translateY(-2px); box-shadow:0 10px 26px -4px rgba(139,92,246,.55); }
+        .welcome { color:#e6efff; font-size:14px; }
+        .logout-btn {
+          padding:8px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.16);
+          background:rgba(255,255,255,0.06); color:#e8eef8; font-weight:600; cursor:pointer;
+        }
+        .logout-btn:hover { background:rgba(255,255,255,0.12); }
 
         .hero {
           padding:80px 34px 40px;
