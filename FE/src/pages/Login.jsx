@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // removed useRef
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 export default function Login() {
@@ -75,11 +75,11 @@ export default function Login() {
       <div className="aurora a2" />
       <div className="aurora a3" />
       <div className="card-wrap">
-        <Link to="/" className="back-btn" aria-label="Go Back Home">
+        <Link to="/" className="back-btn" aria-label="Back Home">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
           </svg>
-          <span>Go Back</span>
+          <span>Back</span>
         </Link>
 
         <div className="card" role="region" aria-label="Login Form">
@@ -153,7 +153,7 @@ export default function Login() {
           <p className="sub">Don’t have an account? <Link to="/register" className="link">Sign up</Link></p>
         </div>
       </div>
-
+      <div className="bottom-bg" aria-hidden="true"></div>
       <style>{`
         :root {
           --bg1: #0f1226;
@@ -193,12 +193,54 @@ export default function Login() {
         .card-wrap {
           position: relative;
           width: 100%;
-          max-width: 420px;
+          max-width: 560px;
         }
-
+        .back-btn {
+          position: absolute;
+          top: -48px;
+          left: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 12px;
+          border-radius: 12px;
+          color: #e2e8f0;
+          text-decoration: none;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.18);
+          backdrop-filter: blur(10px);
+          transition: background .25s, border-color .25s, transform .12s, box-shadow .25s;
+        }
+        .back-btn:hover {
+          background: rgba(255,255,255,0.12);
+          border-color: rgba(255,255,255,0.30);
+          box-shadow: 0 6px 20px -6px rgba(139,92,246,0.55);
+        }
+        .back-btn:active { transform: translateY(1px); }
+        .back-btn svg {
+          width:16px;
+          height:16px;
+          display:block;
+        }
+        .back-btn span {
+          font-size:12px;
+          font-weight:600;
+          letter-spacing:.3px;
+          color:#ffffff;
+        }
+        @media (max-width:640px){
+          .bottom-bg { height:220px; opacity:.9; }
+        }
+        @media (max-width: 640px) {
+          .card-wrap, .card { max-width: 100%; }
+        }
+        @media (max-width: 420px) {
+          .card { padding: 22px; }
+          .back-btn { top: -44px; } /* adjust for mobile */
+        }
         .card {
           width: 100%;
-          max-width: 420px;
+          max-width: 560px; /* was 420px */
           background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
           border: 1px solid var(--border);
           border-radius: var(--radius);
@@ -297,58 +339,205 @@ export default function Login() {
           background: linear-gradient(135deg, var(--pri2), var(--pri1));
           box-shadow: 0 12px 30px rgba(139, 92, 246, 0.35);
           transition: transform .08s ease, filter .2s ease, box-shadow .2s ease;
+          position: relative;
+          overflow: hidden;
         }
-        .submit:hover { filter: brightness(1.05); box-shadow: 0 16px 36px rgba(139, 92, 246, 0.45); }
-        .submit:active { transform: translateY(1px); }
-        .submit:disabled {
-          cursor: not-allowed; opacity: .8; filter: saturate(.7);
+        .submit::after {
+          content:"";
+          position:absolute;
+          inset:0;
+          background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.35) 50%,rgba(255,255,255,0) 100%);
+          transform:translateX(-110%);
+          animation: shine 3.2s linear infinite;
+          pointer-events:none;
         }
-        .spinner {
-          width: 18px; height: 18px; border-radius: 50%;
-          border: 2px solid rgba(255,255,255,.45);
-          border-top-color: white;
-          display: inline-block;
-          animation: spin .7s linear infinite;
+        @keyframes shine {
+          0% { transform:translateX(-110%); }
+          60% { transform:translateX(120%); }
+          100% { transform:translateX(120%); }
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .sub {
-          margin-top: 14px; text-align: center; color: var(--muted); font-size: 13px;
+          margin-top:14px;
+          text-align:center;
+          color: var(--muted);
+          font-size:13px;
         }
-
-        /* Back button di luar card, ikon di bawah teks */
-        .back-btn {
+        .bottom-bg {
           position: absolute;
-          top: -48px; /* was -56px */
-          left: 0;    /* kiri card */
-          display: inline-flex;
-          align-items: center;    /* was column layout */
-          gap: 8px; /* adjust gap for arrow + text */
-          padding: 6px 12px;
-          border-radius: 12px;
-          color: #e2e8f0;
-          text-decoration: none;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.18);
-          backdrop-filter: blur(10px);
-          transition: background .25s, border-color .25s, transform .12s, box-shadow .25s;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 300px;
+          background: url('/BackgroundBawah.svg') center bottom / cover no-repeat;
+          pointer-events: none;
+          opacity: .85;
+          z-index: 0;
         }
-        .back-btn:hover {
-          background: rgba(255,255,255,0.12);
-          border-color: rgba(255,255,255,0.30);
-          box-shadow: 0 6px 20px -6px rgba(139,92,246,0.55);
+        .bottom-bg::after {
+          content: "";
+          position: absolute;
+          inset: 0 0 0 0;
+          background: linear-gradient(to top, rgba(15,18,38,0.9), rgba(15,18,38,0.5) 40%, transparent 75%);
+          pointer-events: none;
         }
-        .back-btn:active { transform: translateY(1px); }
-        .back-btn svg {
-          width:16px;
-          height:16px;
+        @media (max-width:640px){
+          .bottom-bg { height:220px; opacity:.9; }
+        }
+        @media (max-width: 640px) {
+          .card-wrap, .card { max-width: 100%; }
+        }
+        @media (max-width: 420px) {
+          .card { padding: 22px; }
+          .back-btn { top: -44px; } /* adjust for mobile */
+        }
+        .card {
+          width: 100%;
+          max-width: 560px; /* was 420px */
+          background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          padding: 28px;
+          backdrop-filter: blur(14px) saturate(120%);
+          -webkit-backdrop-filter: blur(14px) saturate(120%);
+          animation: floatIn .7s ease both;
+        }
+        @keyframes floatIn {
+          from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.98); }
+          to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        .brand {
+          display: grid; gap: 8px; text-align: center; margin-bottom: 18px;
+        }
+        .brand-icon {
+          width:46px;
+          height:46px;
           display:block;
-          position:relative;
-          top:2px; /* push arrow slightly down */
+          filter: drop-shadow(0 4px 14px rgba(139,92,246,.45));
+          animation: popIn .5s ease;
         }
-        .back-btn span {
-          font-size: 12px; font-weight: 600; letter-spacing: .3px;
+        @keyframes popIn {
+          from { opacity:0; transform:scale(.85) translateY(4px); }
+          to { opacity:1; transform:scale(1) translateY(0); }
         }
-
+        .brand h1 { margin: 4px 0 0; font-size: 22px; letter-spacing: .2px; }
+        .brand p { margin: 0; color: var(--muted); font-size: 14px; }
+        form { display: grid; gap: 14px; }
+        label { font-size: 13px; color: #c7cbe2; }
+        .field {
+          position: relative;
+          display: grid;
+        }
+        .field input {
+          width: 100%;
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1px solid var(--border);
+          background: rgba(6, 8, 22, 0.35);
+          color: var(--fg);
+          outline: none;
+          transition: border-color .2s, box-shadow .2s, background .2s;
+        }
+        .field input::placeholder { color: #94a3b866; }
+        .field input:focus {
+          border-color: #7dd3fcaa;
+          box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.12);
+          background: rgba(6, 8, 22, 0.5);
+        }
+        .field.error input {
+          border-color: #f87171bb;
+          box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.12);
+        }
+        .hint {
+          margin-top: 6px;
+          font-size: 12px;
+          color: #fca5a5;
+        }
+        .with-icon { display: grid; }
+        .with-icon input { padding-right: 44px; }
+        .icon-btn {
+          position: absolute;
+          right: 8px; top: 50%;
+          transform: translateY(-50%);
+          border: none; background: transparent; color: #cbd5e1;
+          width: 34px; height: 34px; border-radius: 8px;
+          display: grid; place-items: center; cursor: pointer;
+          transition: background .2s, color .2s, transform .1s;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.06); color: var(--fg); }
+        .icon-btn:active { transform: translateY(-50%) scale(0.98); }
+        .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        .row {
+          margin-top: 4px;
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 8px; flex-wrap: wrap;
+        }
+        .checkbox { display: inline-flex; align-items: center; gap: 8px; color: #c7cbe2; font-size: 13px; cursor: pointer; }
+        .checkbox input { accent-color: #7dd3fc; width: 16px; height: 16px; }
+        .link {
+          color: #93c5fd; text-decoration: none; font-size: 13px;
+        }
+        .link:hover { text-decoration: underline; }
+        .submit {
+          margin-top: 6px;
+          width: 100%;
+          border: none;
+          border-radius: 12px;
+          padding: 12px 14px;
+          color: white;
+          font-weight: 600;
+          letter-spacing: .2px;
+          cursor: pointer;
+          background: linear-gradient(135deg, var(--pri2), var(--pri1));
+          box-shadow: 0 12px 30px rgba(139, 92, 246, 0.35);
+          transition: transform .08s ease, filter .2s ease, box-shadow .2s ease;
+          position: relative;
+          overflow: hidden;
+        }
+        .submit::after {
+          content:"";
+          position:absolute;
+          inset:0;
+          background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.35) 50%,rgba(255,255,255,0) 100%);
+          transform:translateX(-110%);
+          animation: shine 3.2s linear infinite;
+          pointer-events:none;
+        }
+        @keyframes shine {
+          0% { transform:translateX(-110%); }
+          60% { transform:translateX(120%); }
+          100% { transform:translateX(120%); }
+        }
+        .sub {
+          margin-top:14px;
+          text-align:center;
+          color: var(--muted);
+          font-size:13px;
+        }
+        .bottom-bg {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 300px;
+          background: url('/BackgroundBawah.svg') center bottom / cover no-repeat;
+          pointer-events: none;
+          opacity: .85;
+          z-index: 0;
+        }
+        .bottom-bg::after {
+          content: "";
+          position: absolute;
+          inset: 0 0 0 0;
+          background: linear-gradient(to top, rgba(15,18,38,0.9), rgba(15,18,38,0.5) 40%, transparent 75%);
+          pointer-events: none;
+        }
+        @media (max-width:640px){
+          .bottom-bg { height:220px; opacity:.9; }
+        }
+        @media (max-width: 640px) {
+          .card-wrap, .card { max-width: 100%; }
+        }
         @media (max-width: 420px) {
           .card { padding: 22px; }
           .back-btn { top: -44px; } /* adjust for mobile */
