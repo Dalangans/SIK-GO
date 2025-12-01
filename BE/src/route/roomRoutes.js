@@ -6,8 +6,8 @@ const { protect, authorize } = require('../middleware/auth');
 // ==================================================================
 // 1. PUBLIC ROUTES (Bisa diakses tanpa login)
 // ==================================================================
-// Jika kamu ingin orang bisa cek ketersediaan tanpa login, taruh di sini:
-// router.get('/:roomId/availability/:date', roomController.getRoomAvailability);
+// Get all rooms - tidak perlu login
+router.get('/', roomController.getAllRooms);
 
 
 // ==================================================================

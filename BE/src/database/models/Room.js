@@ -1,34 +1,92 @@
 const mongoose = require('mongoose');
 
 const RoomSchema = new mongoose.Schema({
-  roomId: {
+  // Primary identifiers
+  gedung: {
+    type: String,
+    required: true,
+    index: true,
+    enum: ['K', 'Area Lain', 'GK', 'S'],
+    description: 'Building code'
+  },
+  ruang: {
+    type: String,
+    required: true,
+    index: true,
+    description: 'Room identifier/name'
+  },
+  
+  // Room details
+  kapasitas: {
     type: Number,
     required: true,
-    unique: true
+    min: 1,
+    description: 'Room capacity in seats'
+  },
+  deskripsi: {
+    type: String,
+    default: '',
+    description: 'Room description and facilities'
+  },
+  lokasi: {
+    type: String,
+    default: '',
+    description: 'Room location/address'
+  },
+  fasilitas: {
+    type: [String],
+    default: [],
+    description: 'Available facilities (projector, whiteboard, etc)'
+  },
+  
+  // Status and availability
+  status: {
+    type: String,
+    enum: ['tersedia', 'tidak tersedia', 'maintenance'],
+    default: 'tersedia',
+    description: 'Current room status'
+  },
+  
+  // Legacy fields for compatibility
+  roomId: {
+    type: Number,
+    default: null,
+    sparse: true
   },
   roomName: {
     type: String,
-    required: true
+    default: null
   },
-  description: String,
   capacity: {
     type: Number,
-    default: 20
+    default: null
   },
-  facilities: [String], // e.g., ['Projector', 'Whiteboard', 'AC']
   isAvailable: {
     type: Boolean,
     default: true
   },
-  location: String,
-  createdAt: {
-    type: Date,
-    default: Date.now
+  facilities: {
+    type: [String],
+    default: []
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  location: {
+    type: String,
+    default: ''
   }
+}, {
+  timestamps: true,
+  collection: 'rooms'
 });
 
+// Ensure unique combination of gedung and ruang
+RoomSchema.index({ gedung: 1, ruang: 1 }, { unique: true, sparse: true });
+
 RoomSchema.methods.checkAvailability = function(date) {
-  return this.isAvailable;
+  return this.isAvailable !== false && this.status === 'tersedia';
 };
 
 RoomSchema.methods.customValidate = function() {

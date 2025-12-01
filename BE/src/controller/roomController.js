@@ -1,4 +1,22 @@
-const roomRepository = require('../repository/roomRepository');
+const RoomRepository = require('../repository/roomRepository');
+
+const roomRepository = new RoomRepository();
+
+exports.getAllRooms = async (req, res) => {
+  try {
+    const rooms = await roomRepository.getAllRooms();
+    res.status(200).json({
+      success: true,
+      data: rooms,
+      count: rooms.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
 
 exports.createRoom = async (req, res) => {
   try {
