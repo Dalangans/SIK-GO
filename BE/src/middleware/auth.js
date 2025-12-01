@@ -10,8 +10,21 @@ exports.protect = async (req, res, next) => {
     token = req.headers.authorization.split(' ')[1];
   }
 
-  // 2. Jika tidak ada token
+  // 2. DEVELOPMENT MODE: Jika tidak ada token dan mode development
   if (!token) {
+    // Check if in development/offline mode
+    if (process.env.MONGODB_URI === 'skip' || process.env.NODE_ENV === 'development') {
+      // Create mock user for development
+      req.user = {
+        _id: 'dev-user-123',
+        email: 'dev@example.com',
+        name: 'Development User',
+        role: 'user',
+        fullName: 'Development User'
+      };
+      return next();
+    }
+    
     return res.status(401).json({ 
         success: false, 
         message: 'Not authorized to access this route' 

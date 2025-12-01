@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { proposalEvaluationAPI } from '../services/api';
 
 export default function Home() {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState('');
+  // Evaluator states
+  const [evalFile, setEvalFile] = useState(null);
+  const [evalTab, setEvalTab] = useState('upload'); // 'upload', 'summary', 'evaluate'
+  const [evalLoading, setEvalLoading] = useState(false);
+  const [evalSummary, setEvalSummary] = useState(null);
+  const [evalResult, setEvalResult] = useState(null);
+  const [evalError, setEvalError] = useState('');
+  
+  // User & auth states
   const [user, setUser] = useState(null);
   const [fetching, setFetching] = useState(true);
   const [fetchError, setFetchError] = useState('');
@@ -58,47 +64,89 @@ export default function Home() {
     return () => cancelAnimationFrame(t);
   }, []);
 
-  const handleFile = (f) => {
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('sikgo_user');
+    navigate('/login', { replace: true });
+  };
+
+  // Evaluator handlers
+  const handleEvalFile = (f) => {
     if (!f) return;
-    setFile(f);
-    setResult('');
-    if (f.type.startsWith('image/')) {
-      const url = URL.createObjectURL(f);
-      setPreview(url);
-    } else {
-      setPreview('');
-    }
-    setScanning(true);
-    // Simulasi proses OCR / ekstraksi
-    setTimeout(() => {
-      setScanning(false);
-      setResult(`Extraction completed (simulation).
-Name: ${f.name}
-Type: ${f.type || 'unknown'}
-Size: ${(f.size / 1024).toFixed(1)} KB
-
-OCR text will appear here after integrating your API.`);
-    }, 1400);
+    setEvalFile(f);
+    setEvalError('');
+    setEvalSummary(null);
+    setEvalResult(null);
+    setEvalTab('upload');
   };
 
-  const onChangeFile = (e) => handleFile(e.target.files?.[0]);
-  const onDrop = (e) => {
+  const onEvalChangeFile = (e) => handleEvalFile(e.target.files?.[0]);
+  
+  const onEvalDrop = (e) => {
     e.preventDefault();
-    handleFile(e.dataTransfer.files?.[0]);
+    handleEvalFile(e.dataTransfer.files?.[0]);
   };
-  const prevent = (e) => e.preventDefault();
 
-  // Auth-guard saat submit: jika belum login, redirect ke /login
-  const onSubmitDoc = async () => {
-    if (!file || scanning) return;
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      navigate('/login'); // arahkan ke login terlebih dahulu
-      return;
+  const handleGenerateSummary = async () => {
+    if (!evalFile) return;
+    setEvalLoading(true);
+    setEvalError('');
+    try {
+      const res = await proposalEvaluationAPI.generateSummary(evalFile);
+      if (res.success) {
+        setEvalSummary(res.data);
+        setEvalTab('summary');
+      } else {
+        setEvalError(res.error || 'Failed to generate summary');
+      }
+    } catch (err) {
+      setEvalError(err.message || 'Error generating summary');
+    } finally {
+      setEvalLoading(false);
     }
-    setResult((prev) => (prev?.trim() ? prev + '\n\nSubmitting document...' : 'Submitting document...'));
-    await new Promise((r) => setTimeout(r, 1000));
-    setResult((prev) => (prev?.trim() ? prev + '\nSubmit complete (simulation).' : 'Submit complete (simulation).'));
+  };
+
+  const handleEvaluate = async () => {
+    if (!evalFile) return;
+    setEvalLoading(true);
+    setEvalError('');
+    try {
+      const res = await proposalEvaluationAPI.evaluateProposal(evalFile);
+      if (res.success) {
+        setEvalResult(res.data);
+        setEvalTab('evaluate');
+      } else {
+        setEvalError(res.error || 'Failed to evaluate proposal');
+      }
+    } catch (err) {
+      setEvalError(err.message || 'Error evaluating proposal');
+    } finally {
+      setEvalLoading(false);
+    }
+  };
+
+  const resetEvaluation = () => {
+    setEvalFile(null);
+    setEvalTab('upload');
+    setEvalSummary(null);
+    setEvalResult(null);
+    setEvalError('');
+  };
+
+  const getRecommendationColor = (rec) => {
+    if (!rec) return '#888';
+    if (rec.toUpperCase() === 'TERIMA') return '#10b981';
+    if (rec.toUpperCase() === 'REVISI') return '#f59e0b';
+    if (rec.toUpperCase() === 'TOLAK') return '#ef4444';
+    return '#888';
+  };
+
+  const getRecommendationBg = (rec) => {
+    if (!rec) return 'rgba(136,136,136,.1)';
+    if (rec.toUpperCase() === 'TERIMA') return 'rgba(16,185,129,.1)';
+    if (rec.toUpperCase() === 'REVISI') return 'rgba(245,158,11,.1)';
+    if (rec.toUpperCase() === 'TOLAK') return 'rgba(239,68,68,.1)';
+    return 'rgba(136,136,136,.1)';
   };
 
   if (fetching) {
@@ -116,12 +164,6 @@ OCR text will appear here after integrating your API.`);
         || user.name
         || (user.email ? user.email.split('@')[0].replace(/[._-]/g, ' ') : 'User'))
     : 'Guest';
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('sikgo_user');
-    navigate('/login', { replace: true });
-  };
 
   return (
     <div className={`home-root ${mounted ? 'animated' : ''}`}>
@@ -154,80 +196,254 @@ OCR text will appear here after integrating your API.`);
         <p>A platform to manage room reservations and FT UI information seamlessly.</p>
       </header>
 
-      {/* Scan / Upload Document */}
-      <section
-        className="doc-scan"
-        onDragOver={prevent}
-        onDragEnter={prevent}
-        onDrop={onDrop}
-      >
-        <div className="scan-box">
-          <div className="scan-head">
-            <h2>Scan / Upload Document</h2>
-            <p>Upload image/PDF, AI extracts text & key data (simulation).</p>
+      {/* Proposal Evaluator Section */}
+      <section className="proposal-evaluator">
+        <div className="evaluator-box">
+          <div className="evaluator-head">
+            <h2>AI Proposal Evaluator</h2>
+            <p>Upload your proposal for AI-powered analysis and FTUI-standard evaluation.</p>
           </div>
 
-            <label className={`dropzone ${scanning ? 'disabled' : ''}`}>
-              <input
-                type="file"
-                accept="image/*,.pdf"
-                onChange={onChangeFile}
-                disabled={scanning}
-                hidden
-              />
-              {!file && (
-                <div className="placeholder">
-                  <img src="/Upload.svg" alt="Upload" className="upload-icon" />
-                  <strong>Drag & Drop</strong>
-                  <span>or click to select file</span>
-                  <em>Format: JPG, PNG, PDF</em>
+          {/* Tabs */}
+          <div className="eval-tabs">
+            <button 
+              className={`eval-tab ${evalTab === 'upload' ? 'active' : ''}`}
+              onClick={() => setEvalTab('upload')}
+            >
+              Upload
+            </button>
+            <button 
+              className={`eval-tab ${evalTab === 'summary' ? 'active' : ''}`}
+              onClick={() => setEvalTab('summary')}
+              disabled={!evalSummary}
+            >
+              Summary
+            </button>
+            <button 
+              className={`eval-tab ${evalTab === 'evaluate' ? 'active' : ''}`}
+              onClick={() => setEvalTab('evaluate')}
+              disabled={!evalResult}
+            >
+              Evaluation
+            </button>
+          </div>
+
+          {/* Upload Tab */}
+          {evalTab === 'upload' && (
+            <div className="eval-tab-content">
+              <label 
+                className="eval-dropzone"
+                onDragOver={(e) => e.preventDefault()}
+                onDragEnter={(e) => e.preventDefault()}
+                onDrop={onEvalDrop}
+              >
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.md,.doc,.docx,.xls,.xlsx"
+                  onChange={onEvalChangeFile}
+                  hidden
+                />
+                {!evalFile ? (
+                  <div className="eval-placeholder">
+                    <div className="eval-icon">📄</div>
+                    <strong>Drag & Drop your proposal</strong>
+                    <span>or click to select file</span>
+                    <em>Formats: PDF, TXT, MD, DOC, DOCX, XLS, XLSX</em>
+                  </div>
+                ) : (
+                  <div className="eval-file-preview">
+                    <div className="eval-file-icon">
+                      {evalFile.type.startsWith('image/') ? '🖼️' : '📄'}
+                    </div>
+                    <div className="eval-file-meta">
+                      <div className="eval-fname">{evalFile.name}</div>
+                      <div className="eval-fsize">{(evalFile.size / 1024).toFixed(1)} KB</div>
+                    </div>
+                    <div className="eval-file-btns">
+                      <button
+                        type="button"
+                        className="eval-action-btn summary-btn"
+                        onClick={handleGenerateSummary}
+                        disabled={evalLoading}
+                      >
+                        {evalLoading ? 'Processing...' : 'Generate Summary'}
+                      </button>
+                      <button
+                        type="button"
+                        className="eval-action-btn evaluate-btn"
+                        onClick={handleEvaluate}
+                        disabled={evalLoading}
+                      >
+                        {evalLoading ? 'Processing...' : 'Evaluate'}
+                      </button>
+                      <button
+                        type="button"
+                        className="eval-action-btn reset-eval-btn"
+                        onClick={resetEvaluation}
+                        disabled={evalLoading}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </label>
+
+              {evalError && (
+                <div className="eval-error">
+                  <strong>Error:</strong> {evalError}
                 </div>
               )}
-              {file && (
-                <div className="preview-wrap">
-                  {preview ? (
-                    <img src={preview} alt="preview" className="preview-img" />
-                  ) : (
-                    <div className="file-icon">
-                      <span>{file.name.split('.').pop()?.toUpperCase() || 'FILE'}</span>
+            </div>
+          )}
+
+          {/* Summary Tab */}
+          {evalTab === 'summary' && evalSummary && (
+            <div className="eval-tab-content">
+              <div className="eval-summary-box">
+                <div className="eval-summary-header">
+                  <h3>Summary</h3>
+                  <div className="eval-file-info">
+                    <span>{evalSummary.filename}</span>
+                    <span className="sep">•</span>
+                    <span>{evalSummary.textLength || 0} chars</span>
+                  </div>
+                </div>
+                <div className="eval-summary-text">
+                  {evalSummary.summary}
+                </div>
+                <div className="eval-summary-actions">
+                  <button
+                    className="eval-action-btn evaluate-btn"
+                    onClick={handleEvaluate}
+                    disabled={evalLoading}
+                  >
+                    {evalLoading ? 'Processing...' : 'Proceed to Evaluation'}
+                  </button>
+                  <button
+                    className="eval-action-btn reset-eval-btn"
+                    onClick={resetEvaluation}
+                    disabled={evalLoading}
+                  >
+                    Upload New File
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Evaluation Tab */}
+          {evalTab === 'evaluate' && evalResult && (
+            <div className="eval-tab-content">
+              <div className="eval-results-box">
+                <div className="eval-results-header">
+                  <h3>Evaluation Results</h3>
+                  <div className="eval-file-info">
+                    <span>{evalResult.filename}</span>
+                  </div>
+                </div>
+
+                {/* Recommendation Badge */}
+                {evalResult.evaluation && (
+                  <div className="eval-recommendation-section">
+                    <div 
+                      className="eval-recommendation"
+                      style={{
+                        borderColor: getRecommendationColor(evalResult.evaluation.recommendation),
+                        backgroundColor: getRecommendationBg(evalResult.evaluation.recommendation)
+                      }}
+                    >
+                      <div className="eval-rec-label">Recommendation</div>
+                      <div 
+                        className="eval-rec-value"
+                        style={{ color: getRecommendationColor(evalResult.evaluation.recommendation) }}
+                      >
+                        {evalResult.evaluation.recommendation?.toUpperCase() || 'N/A'}
+                      </div>
+                    </div>
+
+                    {/* Total Score */}
+                    <div className="eval-score-section">
+                      <div className="eval-score-label">Overall Score</div>
+                      <div className="eval-score-display">
+                        <div className="eval-score-value">
+                          {evalResult.evaluation.total_score || 0}
+                          <span className="eval-score-max">/75</span>
+                        </div>
+                        <div className="eval-score-bar">
+                          <div 
+                            className="eval-score-fill"
+                            style={{
+                              width: `${Math.min((evalResult.evaluation.total_score || 0) / 75 * 100, 100)}%`,
+                              backgroundColor: getRecommendationColor(evalResult.evaluation.recommendation)
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Scores Grid */}
+                {evalResult.evaluation?.scores && (
+                  <div className="eval-scores-grid">
+                    <h4>Parameter Scores</h4>
+                    <div className="eval-scores-list">
+                      {evalResult.evaluation.scores.map((score, idx) => (
+                        <div key={idx} className="eval-score-item">
+                          <div className="eval-score-name">{score.parameter}</div>
+                          <div className="eval-score-bars">
+                            <div className="eval-score-bar-bg">
+                              <div 
+                                className="eval-score-bar-fg"
+                                style={{
+                                  width: `${(score.score / 5) * 100}%`
+                                }}
+                              />
+                            </div>
+                            <div className="eval-score-number">{score.score.toFixed(1)}/5</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Strengths & Weaknesses */}
+                <div className="eval-feedback-section">
+                  {evalResult.evaluation?.strengths && evalResult.evaluation.strengths.length > 0 && (
+                    <div className="eval-feedback-box strengths">
+                      <h4>✓ Strengths</h4>
+                      <ul>
+                        {evalResult.evaluation.strengths.map((s, idx) => (
+                          <li key={idx}>{s}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
-                  <div className="meta">
-                    <div className="fname">{file.name}</div>
-                    <div className="fsize">{(file.size / 1024).toFixed(1)} KB</div>
-                  </div>
-                  <div className="btns">
-                    <button
-                      type="button"
-                      className="submit-btn"
-                      onClick={onSubmitDoc}
-                      disabled={scanning}
-                    >
-                      Submit
-                    </button>
-                    <button
-                      type="button"
-                      className="reset-btn"
-                      onClick={() => {
-                        setFile(null);
-                        setPreview('');
-                        setResult('');
-                        setScanning(false);
-                      }}
-                      disabled={scanning}
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-              )}
-              {scanning && <div className="scan-overlay"><div className="spinner" /> <span>Scanning...</span></div>}
-            </label>
 
-          {result && (
-            <div className="result-box">
-              <h3>Extraction Result</h3>
-              <pre>{result}</pre>
+                  {evalResult.evaluation?.weaknesses && evalResult.evaluation.weaknesses.length > 0 && (
+                    <div className="eval-feedback-box weaknesses">
+                      <h4>! Weaknesses</h4>
+                      <ul>
+                        {evalResult.evaluation.weaknesses.map((w, idx) => (
+                          <li key={idx}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="eval-results-actions">
+                  <button
+                    className="eval-action-btn reset-eval-btn"
+                    onClick={resetEvaluation}
+                  >
+                    Evaluate Another Proposal
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -410,80 +626,7 @@ OCR text will appear here after integrating your API.`);
         }
         .hero p { margin:0; font-size:17px; color:#b4bccf; line-height:1.5; }
 
-        /* Scan box */
-        .doc-scan { padding:10px 34px 70px; max-width:960px; margin:0 auto; width:100%; }
-        .scan-box {
-          display:grid; gap:22px; padding:28px 26px 30px; border-radius:var(--radius-lg);
-          background:var(--panel-bg); border:1px solid rgba(255,255,255,.02); backdrop-filter:blur(10px);
-        }
-        .scan-head h2 {
-          margin:0; font-size:20px; background:linear-gradient(90deg,#ffffff,#b5c6ff);
-          -webkit-background-clip:text; color:transparent;
-        }
-        .scan-head p { margin:6px 0 0; font-size:13px; color:var(--color-text-dim); letter-spacing:.2px; }
-        .dropzone {
-          position:relative; min-height:200px; display:grid; place-items:center;
-          border:1.5px dashed rgba(255,255,255,.28); border-radius:18px; padding:20px;
-          background:rgba(255,255,255,.04); cursor:pointer; color:#c7d0df; transition:.3s;
-        }
-        .dropzone:hover { border-color:rgba(139,92,246,.6); background:rgba(255,255,255,.07); }
-        .dropzone.disabled { opacity:.7; cursor:default; }
-        .placeholder { display:grid; gap:6px; text-align:center; }
-        .placeholder strong { font-size:14px; }
-        .placeholder span { font-size:12px; color:#a6b2c6; }
-        .placeholder em { font-size:11px; color:#8a95a8; font-style:normal; }
-        .upload-icon { width:40px; height:40px; opacity:.85; filter:drop-shadow(0 10px 12px rgba(0,0,0,.35)); }
-        .preview-wrap { display:grid; grid-template-columns:100px 1fr auto; gap:18px; align-items:center; width:100%; }
-        .preview-img,.file-icon {
-          width:100px; height:100px; border-radius:12px;
-        }
-        .preview-img { object-fit:cover; border:1px solid rgba(255,255,255,.18); box-shadow:0 6px 18px -6px rgba(0,0,0,.4); }
-        .file-icon {
-          background:linear-gradient(140deg,#6ee7f9,#8b5cf6); display:grid; place-items:center;
-          font-weight:600; font-size:18px; color:#101524; letter-spacing:.5px;
-        }
-        .meta { display:grid; gap:4px; }
-        .fname { font-size:14px; font-weight:600; color:#eef1f7; word-break:break-all; }
-        .fsize { font-size:12px; color:#93a0b4; }
-        .btns { display:flex; gap:10px; }
-        .submit-btn {
-          height:36px; padding:8px 14px; border:none; border-radius:10px; font-weight:600;
-          color:#0b0f1f; background:linear-gradient(135deg,#6ee7f9,#8b5cf6);
-          box-shadow:0 8px 22px -6px rgba(139,92,246,.5); cursor:pointer; transition:.2s;
-        }
-        .submit-btn:hover { filter:brightness(1.05); box-shadow:0 12px 28px -6px rgba(139,92,246,.6); }
-        .submit-btn:disabled { opacity:.6; cursor:not-allowed; }
-        .reset-btn {
-          height:36px; padding:8px 14px; background:rgba(255,255,255,.08);
-          border:1px solid rgba(255,255,255,.16); border-radius:10px; color:#e6ecf5;
-          font-size:12px; cursor:pointer; transition:.25s;
-        }
-        .reset-btn:hover:not(:disabled) { background:rgba(255,255,255,.14); }
-        .reset-btn:disabled { opacity:.6; cursor:not-allowed; }
-        .scan-overlay {
-          position:absolute; inset:0; background:rgba(12,16,2,.72); backdrop-filter:blur(6px);
-          display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
-          font-size:13px; letter-spacing:.3px;
-        }
-        .spinner {
-          width:32px; height:32px; border-radius:50%;
-          border:3px solid rgba(255,255,255,.25); border-top-color:#fff;
-          animation:spin .8s linear infinite;
-        }
-        @keyframes spin { to { transform:rotate(360deg); } }
-
-        .result-box {
-          background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
-          border-radius:16px; padding:20px 18px 18px; display:grid; gap:12px;
-        }
-        .result-box h3 { margin:0; font-size:15px; font-weight:600; letter-spacing:.4px; color:#e9edf5; }
-        .result-box pre {
-          margin:0; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas;
-          font-size:12px; line-height:1.55; white-space:pre-wrap; color:#c9d4e3;
-          max-height:260px; overflow:auto;
-        }
-
-        /* About */
+        /* Proposal Evaluator */
         .about-us { padding:10px 34px 40px; margin:120px auto 110px; }
         .about-box {
           max-width:1080px; margin:0 auto; display:grid; gap:26px;
@@ -539,6 +682,176 @@ OCR text will appear here after integrating your API.`);
           font-size:12px; letter-spacing:.4px; color:#798494; text-align:center;
         }
 
+        /* Proposal Evaluator */
+        .proposal-evaluator { padding:10px 34px 70px; max-width:960px; margin:0 auto; width:100%; }
+        .evaluator-box {
+          display:grid; gap:22px; padding:28px 26px 30px; border-radius:var(--radius-lg);
+          background:var(--panel-bg); border:1px solid rgba(255,255,255,.02); backdrop-filter:blur(10px);
+        }
+        .evaluator-head h2 {
+          margin:0; font-size:20px; background:linear-gradient(90deg,#ffffff,#b5c6ff);
+          -webkit-background-clip:text; color:transparent;
+        }
+        .evaluator-head p { margin:6px 0 0; font-size:13px; color:var(--color-text-dim); letter-spacing:.2px; }
+
+        /* Tabs */
+        .eval-tabs {
+          display:flex; gap:8px; border-bottom:1px solid rgba(255,255,255,.12);
+          padding-bottom:14px; margin-bottom:12px;
+        }
+        .eval-tab {
+          padding:8px 14px; font-size:12px; font-weight:600; letter-spacing:.3px;
+          border:none; background:transparent; color:#97a2b8; cursor:pointer;
+          border-bottom:2px solid transparent; transition:.25s;
+          position:relative; bottom:-2px;
+        }
+        .eval-tab:hover:not(:disabled) { color:#e6e9f5; }
+        .eval-tab.active { color:#6ee7f9; border-bottom-color:#6ee7f9; }
+        .eval-tab:disabled { opacity:.5; cursor:not-allowed; }
+
+        .eval-tab-content { display:grid; gap:16px; }
+
+        /* Dropzone */
+        .eval-dropzone {
+          position:relative; min-height:200px; display:grid; place-items:center;
+          border:1.5px dashed rgba(255,255,255,.28); border-radius:18px; padding:20px;
+          background:rgba(255,255,255,.04); cursor:pointer; color:#c7d0df; transition:.3s;
+        }
+        .eval-dropzone:hover { border-color:rgba(139,92,246,.6); background:rgba(255,255,255,.07); }
+        .eval-placeholder { display:grid; gap:8px; text-align:center; }
+        .eval-icon { font-size:36px; }
+        .eval-placeholder strong { font-size:14px; }
+        .eval-placeholder span { font-size:12px; color:#a6b2c6; }
+        .eval-placeholder em { font-size:11px; color:#8a95a8; font-style:normal; }
+
+        .eval-file-preview { display:grid; grid-template-columns:80px 1fr auto; gap:16px; align-items:center; width:100%; }
+        .eval-file-icon { font-size:32px; text-align:center; }
+        .eval-file-meta { display:grid; gap:4px; }
+        .eval-fname { font-size:14px; font-weight:600; color:#eef1f7; word-break:break-all; }
+        .eval-fsize { font-size:12px; color:#93a0b4; }
+        .eval-file-btns { display:flex; gap:8px; flex-wrap:wrap; }
+
+        .eval-action-btn {
+          padding:8px 12px; border:none; border-radius:8px; font-size:12px; font-weight:600;
+          cursor:pointer; transition:.2s; letter-spacing:.2px;
+        }
+        .eval-action-btn:disabled { opacity:.6; cursor:not-allowed; }
+
+        .summary-btn {
+          background:linear-gradient(135deg,#6ee7f9,#8b5cf6); color:#0b0f1f;
+          box-shadow:0 6px 16px -4px rgba(139,92,246,.4);
+        }
+        .summary-btn:hover:not(:disabled) { filter:brightness(1.05); box-shadow:0 8px 20px -4px rgba(139,92,246,.5); }
+
+        .evaluate-btn {
+          background:linear-gradient(135deg,#10b981,#06b6d4); color:#fff;
+          box-shadow:0 6px 16px -4px rgba(16,185,129,.4);
+        }
+        .evaluate-btn:hover:not(:disabled) { filter:brightness(1.05); box-shadow:0 8px 20px -4px rgba(16,185,129,.5); }
+
+        .reset-eval-btn {
+          background:rgba(255,255,255,.08); color:#e6ecf5;
+          border:1px solid rgba(255,255,255,.16);
+        }
+        .reset-eval-btn:hover:not(:disabled) { background:rgba(255,255,255,.14); }
+
+        /* Error */
+        .eval-error {
+          padding:12px 14px; border-radius:12px; border-left:3px solid #ef4444;
+          background:rgba(239,68,68,.1); color:#fca5a5; font-size:13px;
+        }
+
+        /* Summary Box */
+        .eval-summary-box { display:grid; gap:18px; }
+        .eval-summary-header { display:grid; gap:6px; }
+        .eval-summary-header h3 { margin:0; font-size:16px; font-weight:600; color:#eef1f7; }
+        .eval-file-info { font-size:12px; color:#97a2b8; }
+        .eval-file-info .sep { margin:0 6px; }
+
+        .eval-summary-text {
+          padding:16px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+          border-radius:12px; line-height:1.6; color:#dce6f3; font-size:14px; white-space:pre-wrap;
+          word-wrap:break-word;
+        }
+
+        .eval-summary-actions { display:flex; gap:10px; }
+
+        /* Results Box */
+        .eval-results-box { display:grid; gap:20px; }
+        .eval-results-header { display:grid; gap:6px; }
+        .eval-results-header h3 { margin:0; font-size:16px; font-weight:600; color:#eef1f7; }
+
+        /* Recommendation & Score */
+        .eval-recommendation-section { display:grid; grid-template-columns:auto 1fr; gap:20px; align-items:center; }
+        .eval-recommendation {
+          padding:16px; border-radius:12px; border:2px solid;
+          background:rgba(255,255,255,.05);
+          display:grid; gap:6px; justify-items:center; min-width:140px;
+        }
+        .eval-rec-label { font-size:12px; color:#97a2b8; font-weight:600; letter-spacing:.2px; }
+        .eval-rec-value { font-size:18px; font-weight:800; letter-spacing:.3px; }
+
+        .eval-score-section { display:grid; gap:10px; }
+        .eval-score-label { font-size:13px; font-weight:600; color:#e6e9f5; }
+        .eval-score-display { display:grid; gap:8px; }
+        .eval-score-value {
+          font-size:28px; font-weight:800; color:#6ee7f9; letter-spacing:.5px;
+        }
+        .eval-score-max { font-size:14px; color:#97a2b8; font-weight:600; }
+        .eval-score-bar {
+          width:100%; height:12px; border-radius:6px; background:rgba(255,255,255,.12);
+          overflow:hidden;
+        }
+        .eval-score-fill {
+          height:100%; background:linear-gradient(90deg,#6ee7f9,#8b5cf6);
+          border-radius:6px; transition:width .5s ease;
+        }
+
+        /* Scores Grid */
+        .eval-scores-grid { display:grid; gap:12px; }
+        .eval-scores-grid h4 { margin:0; font-size:14px; font-weight:600; color:#e6e9f5; }
+        .eval-scores-list { display:grid; gap:10px; }
+        .eval-score-item {
+          padding:12px; border-radius:10px; background:rgba(255,255,255,.05);
+          border:1px solid rgba(255,255,255,.12); display:grid; gap:8px;
+        }
+        .eval-score-name { font-size:12px; font-weight:600; color:#dce6f3; }
+        .eval-score-bars { display:flex; align-items:center; gap:8px; }
+        .eval-score-bar-bg {
+          flex:1; height:8px; border-radius:4px; background:rgba(255,255,255,.12);
+          overflow:hidden;
+        }
+        .eval-score-bar-fg {
+          height:100%; background:linear-gradient(90deg,#6ee7f9,#8b5cf6);
+          border-radius:4px;
+        }
+        .eval-score-number { font-size:11px; color:#97a2b8; font-weight:600; min-width:40px; text-align:right; }
+
+        /* Feedback */
+        .eval-feedback-section { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
+        .eval-feedback-box {
+          padding:14px; border-radius:10px; border:1px solid;
+          display:grid; gap:10px;
+        }
+        .eval-feedback-box h4 { margin:0; font-size:13px; font-weight:700; }
+        .eval-feedback-box ul { margin:0; padding-left:18px; display:grid; gap:6px; }
+        .eval-feedback-box li { font-size:12px; line-height:1.5; }
+
+        .strengths {
+          background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3);
+          color:#a7f3d0;
+        }
+        .strengths h4 { color:#6ee7b5; }
+
+        .weaknesses {
+          background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.3);
+          color:#fed7aa;
+        }
+        .weaknesses h4 { color:#fbbf24; }
+
+        /* Results Actions */
+        .eval-results-actions { display:flex; gap:10px; margin-top:10px; }
+
         /* Responsive */
         @media (max-width:960px){
           .contact-grid { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:28px; }
@@ -552,6 +865,10 @@ OCR text will appear here after integrating your API.`);
           .links a { font-size:13px; padding:4px 2px; }
           .welcome { display:none; }
           .hero { padding:90px 22px 46px; }
+          .eval-recommendation-section { grid-template-columns:1fr; }
+          .eval-file-preview { grid-template-columns:60px 1fr; }
+          .eval-file-btns { flex-direction:column; }
+          .eval-action-btn { width:100%; }
         }
         @media (max-width:460px){
           .logo-text { display:none; }
@@ -559,18 +876,18 @@ OCR text will appear here after integrating your API.`);
         }
 
         /* Simple entrance animation */
-        .home-root .hero,.home-root .doc-scan,.home-root .about-us,.home-root .contact-block {
+        .home-root .hero,.home-root .proposal-evaluator,.home-root .about-us,.home-root .contact-block {
           opacity:0; transform:translateY(20px) scale(.97);
         }
         .home-root.animated .hero,
-        .home-root.animated .doc-scan,
+        .home-root.animated .proposal-evaluator,
         .home-root.animated .about-us,
         .home-root.animated .contact-block {
           opacity:1; transform:translateY(0) scale(1);
           transition:opacity .7s ease, transform .7s cubic-bezier(.16,.72,.25,1);
         }
         .home-root.animated .hero { transition-delay:.05s; }
-        .home-root.animated .doc-scan { transition-delay:.18s; }
+        .home-root.animated .proposal-evaluator { transition-delay:.18s; }
         .home-root.animated .about-us { transition-delay:.28s; }
         .home-root.animated .contact-block { transition-delay:.38s; }
       `}</style>

@@ -10,9 +10,20 @@ const RoomSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  description: String,
+  capacity: {
+    type: Number,
+    default: 20
+  },
+  facilities: [String], // e.g., ['Projector', 'Whiteboard', 'AC']
   isAvailable: {
     type: Boolean,
     default: true
+  },
+  location: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 

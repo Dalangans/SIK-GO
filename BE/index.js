@@ -2,12 +2,16 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 const authRoutes = require('./src/route/authRoutes');
 const userRoutes = require('./src/route/userRoutes');
 const roomRoutes = require('./src/route/roomRoutes');
 const sikDocumentRoutes = require('./src/route/sikDocumentRoutes');
+const proposalRoutes = require('./src/route/proposalRoutes');
+const bookingRoutes = require('./src/route/bookingRoutes');
+const proposalAnalysisRoutes = require('./src/route/proposalAnalysisRoutes');
+const proposalEvaluationRoutes = require('./src/route/proposalEvaluationRoutes');
 const { connectDB } = require('./src/database/connection');
-//const User = require('./src/database/models/User'); // tambah: untuk fallback register
 
 // Load environment variables
 dotenv.config();
@@ -23,19 +27,28 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173'
 ].filter(Boolean);
+
 app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(null, false);
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization']
+  allowedHeaders: ['Content-Type','Authorization'],
+  maxAge: 3600
 }));
+
 app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Static files untuk uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Log sederhana untuk debug
 app.use((req, _res, next) => { console.log(`${req.method} ${req.path}`); next(); });
 
@@ -47,22 +60,26 @@ const startServer = () => {
 };
 
 // Connect to database (start server after connected) sekali saja
-connectDB()
-  .then(() => {
-    console.log('MongoDB connected');
-    startServer();
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err?.message);
-    // tetap jalankan server agar endpoint bisa menampilkan error
-    startServer();
-  });
+(async () => {
+  try {
+    await connectDB();
+    console.log('✓ MongoDB connected successfully');
+  } catch (err) {
+    console.warn('⚠ MongoDB connection failed:', err?.message);
+    console.log('⚠ Starting server in offline mode (features limited)');
+  }
+  startServer();
+})();
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/documents', sikDocumentRoutes);
+app.use('/api/proposals', proposalRoutes);
+app.use('/api/proposals-evaluation', proposalEvaluationRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/proposals-analysis', proposalAnalysisRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
