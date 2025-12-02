@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { bookingAPI, roomAPI } from '../services/api';
 
 export default function BookingForm({ onSuccess }) {
@@ -6,235 +6,346 @@ export default function BookingForm({ onSuccess }) {
     roomId: '',
     startDate: '',
     endDate: '',
-    startTime: '',
-    endTime: '',
+    startTime: '08:00',
+    endTime: '10:00',
     purpose: '',
     description: '',
-    participantCount: 1,
+    kelas: '',
+    participantCount: '1'
   });
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [roomsLoading, setRoomsLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  React.useEffect(() => {
+  // Load rooms on component mount
+  useEffect(() => {
     loadRooms();
   }, []);
 
   const loadRooms = async () => {
     try {
-      const data = await roomAPI.getAllRooms();
-      setRooms(data.data || []);
+      setRoomsLoading(true);
+      const res = await roomAPI.getAllRooms();
+      if (res.success) {
+        setRooms(res.data || []);
+      } else {
+        setError(res.error || 'Failed to load rooms');
+      }
     } catch (err) {
-      console.error('Error loading rooms:', err);
+      setError(err.message || 'Error loading rooms');
+    } finally {
+      setRoomsLoading(false);
     }
   };
 
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'participantCount' ? parseInt(value) : value
-    }));
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  const validateForm = () => {
+    if (!formData.roomId) {
+      setError('Please select a room');
+      return false;
+    }
+    if (!formData.startDate) {
+      setError('Please select start date');
+      return false;
+    }
+    if (!formData.endDate) {
+      setError('Please select end date');
+      return false;
+    }
+    if (new Date(formData.endDate) < new Date(formData.startDate)) {
+      setError('End date must be after start date');
+      return false;
+    }
+    if (!formData.startTime) {
+      setError('Please select start time');
+      return false;
+    }
+    if (!formData.endTime) {
+      setError('Please select end time');
+      return false;
+    }
+    if (formData.startTime >= formData.endTime) {
+      setError('End time must be after start time');
+      return false;
+    }
+    if (!formData.purpose.trim()) {
+      setError('Please enter booking purpose');
+      return false;
+    }
+    if (!formData.kelas.trim()) {
+      setError('Please select or enter class');
+      return false;
+    }
+    if (!formData.participantCount || parseInt(formData.participantCount) < 1) {
+      setError('Please enter valid participant count');
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
     setSuccess('');
 
-    try {
-      await bookingAPI.createBooking(formData);
-      setSuccess('Booking berhasil dibuat! Tunggu persetujuan admin.');
-      setFormData({
-        roomId: '',
-        startDate: '',
-        endDate: '',
-        startTime: '',
-        endTime: '',
-        purpose: '',
-        description: '',
-        participantCount: 1,
-      });
-      if (onSuccess) onSuccess();
-    } catch (err) {
-      setError(err.message || 'Gagal membuat booking');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGetRecommendations = async () => {
-    if (!formData.roomId || !formData.startDate || !formData.startTime) {
-      setError('Isi roomId, startDate, dan startTime terlebih dahulu');
+    if (!validateForm()) {
       return;
     }
 
     try {
-      const recommendations = await bookingAPI.getAIRecommendations({
+      setLoading(true);
+      const bookingData = {
         roomId: formData.roomId,
         startDate: formData.startDate,
         endDate: formData.endDate,
         startTime: formData.startTime,
         endTime: formData.endTime,
         purpose: formData.purpose,
-        personCount: formData.participantCount,
-      });
-      setSuccess(`AI Recommendation: ${recommendations.data?.recommendation || 'N/A'}`);
+        description: formData.description,
+        kelas: formData.kelas,
+        participantCount: parseInt(formData.participantCount)
+      };
+
+      const res = await bookingAPI.createBooking(bookingData);
+      if (res.success) {
+        setSuccess('Booking created successfully!');
+        setFormData({
+          roomId: '',
+          startDate: '',
+          endDate: '',
+          startTime: '08:00',
+          endTime: '10:00',
+          purpose: '',
+          description: '',
+          kelas: '',
+          participantCount: '1'
+        });
+        if (onSuccess) onSuccess();
+      } else {
+        setError(res.error || 'Failed to create booking');
+      }
     } catch (err) {
-      setError('Error getting recommendations: ' + err.message);
+      setError(err.message || 'Error creating booking');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '500px', margin: '20px auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <h2>Pesan Ruangan</h2>
-      
-      {error && <div style={{ color: 'red', padding: '10px', marginBottom: '10px', backgroundColor: '#ffebee', borderRadius: '4px' }}>{error}</div>}
-      {success && <div style={{ color: 'green', padding: '10px', marginBottom: '10px', backgroundColor: '#e8f5e9', borderRadius: '4px' }}>{success}</div>}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Ruangan *</label>
-          <select
-            name="roomId"
-            value={formData.roomId}
-            onChange={handleChange}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          >
-            <option value="">Pilih Ruangan</option>
-            {rooms.map(room => (
-              <option key={room._id} value={room._id}>
-                {room.roomName} (Kapasitas: {room.capacity})
-              </option>
-            ))}
-          </select>
+    <div style={styles.container}>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Room *</label>
+          {roomsLoading ? (
+            <p>Loading rooms...</p>
+          ) : (
+            <select
+              name="roomId"
+              value={formData.roomId}
+              onChange={handleInputChange}
+              style={styles.input}
+              required
+            >
+              <option value="">-- Select Room --</option>
+              {rooms.map(room => (
+                <option key={room._id} value={room._id}>
+                  {room.ruang} - {room.gedung} (Capacity: {room.kapasitas})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Tanggal Mulai *</label>
-          <input
-            type="date"
-            name="startDate"
-            value={formData.startDate}
-            onChange={handleChange}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
+        <div style={styles.formGrid}>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Start Date *</label>
+            <input
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleInputChange}
+              min={new Date().toISOString().split('T')[0]}
+              style={styles.input}
+              required
+            />
+          </div>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>End Date *</label>
+            <input
+              type="date"
+              name="endDate"
+              value={formData.endDate}
+              onChange={handleInputChange}
+              min={formData.startDate || new Date().toISOString().split('T')[0]}
+              style={styles.input}
+              required
+            />
+          </div>
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Tanggal Selesai *</label>
-          <input
-            type="date"
-            name="endDate"
-            value={formData.endDate}
-            onChange={handleChange}
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-          <div style={{ flex: 1 }}>
-            <label>Waktu Mulai *</label>
+        <div style={styles.formGrid}>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Start Time *</label>
             <input
               type="time"
               name="startTime"
               value={formData.startTime}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              style={styles.input}
               required
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
             />
           </div>
-          <div style={{ flex: 1 }}>
-            <label>Waktu Selesai *</label>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>End Time *</label>
             <input
               type="time"
               name="endTime"
               value={formData.endTime}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              style={styles.input}
               required
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
             />
           </div>
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Tujuan *</label>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Class/Kelas *</label>
+          <select
+            name="kelas"
+            value={formData.kelas}
+            onChange={handleInputChange}
+            style={styles.input}
+            required
+          >
+            <option value="">-- Select Class --</option>
+            <option value="2023-1">2023-1</option>
+            <option value="2023-2">2023-2</option>
+            <option value="2024-1">2024-1</option>
+            <option value="2024-2">2024-2</option>
+            <option value="2025-1">2025-1</option>
+            <option value="2025-2">2025-2</option>
+          </select>
+        </div>
+
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Purpose *</label>
           <input
             type="text"
             name="purpose"
             value={formData.purpose}
-            onChange={handleChange}
-            placeholder="Mis: Rapat, Kuliah, Seminar"
+            onChange={handleInputChange}
+            placeholder="e.g. Meeting, Class, Seminar"
+            style={styles.input}
             required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Deskripsi</label>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Description</label>
           <textarea
             name="description"
             value={formData.description}
-            onChange={handleChange}
-            placeholder="Deskripsi detail (opsional)"
-            style={{ width: '100%', padding: '8px', marginTop: '5px', minHeight: '60px' }}
+            onChange={handleInputChange}
+            placeholder="Additional information (optional)"
+            style={{ ...styles.input, minHeight: '80px', resize: 'vertical' }}
+            rows={3}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Jumlah Peserta *</label>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Participant Count *</label>
           <input
             type="number"
             name="participantCount"
             value={formData.participantCount}
-            onChange={handleChange}
+            onChange={handleInputChange}
             min="1"
+            style={styles.input}
             required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <button
-            type="button"
-            onClick={handleGetRecommendations}
-            style={{
-              width: '100%',
-              padding: '10px',
-              backgroundColor: '#2196F3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginBottom: '10px'
-            }}
-          >
-            💡 Dapatkan Rekomendasi AI
-          </button>
-        </div>
+        {error && <div style={styles.errorMessage}>{error}</div>}
+        {success && <div style={styles.successMessage}>{success}</div>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: loading ? '#ccc' : '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '16px'
-          }}
-        >
-          {loading ? 'Memproses...' : 'Buat Booking'}
+        <button type="submit" disabled={loading} style={styles.submitBtn}>
+          {loading ? 'Creating...' : 'Create Booking'}
         </button>
       </form>
     </div>
   );
 }
+
+const styles = {
+  container: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px'
+  },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '15px'
+  },
+  formGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px'
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: '14px',
+    color: '#333'
+  },
+  input: {
+    padding: '10px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontFamily: 'Arial, sans-serif',
+    boxSizing: 'border-box'
+  },
+  submitBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#1976D2',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 'bold'
+  },
+  errorMessage: {
+    backgroundColor: '#ffebee',
+    border: '1px solid #ef5350',
+    color: '#c62828',
+    padding: '10px',
+    borderRadius: '4px',
+    fontSize: '14px'
+  },
+  successMessage: {
+    backgroundColor: '#e8f5e9',
+    border: '1px solid #66bb6a',
+    color: '#2e7d32',
+    padding: '10px',
+    borderRadius: '4px',
+    fontSize: '14px'
+  }
+};

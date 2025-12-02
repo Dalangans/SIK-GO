@@ -1,4 +1,5 @@
 const Booking = require('../database/models/Booking');
+const logger = require('../util/logger');
 
 class BookingRepository {
   // Create booking
@@ -8,9 +9,25 @@ class BookingRepository {
         user: userId,
         ...bookingData
       });
+      logger.info('[BookingRepo] Saving booking', { user: userId, ...bookingData });
       await booking.save();
-      return booking.populate('room');
+      logger.info('[BookingRepo] Booking saved with ID', { bookingId: booking._id });
+      
+      // Populate references
+      const populatedBooking = await Booking.findById(booking._id)
+        .populate('user', 'email name')
+        .populate('room')
+        .populate('proposal', 'title');
+      
+      logger.info('[BookingRepo] Booking populated successfully', { bookingId: booking._id });
+      return populatedBooking;
     } catch (error) {
+      logger.error('[BookingRepo] Error creating booking', {
+        message: error.message,
+        stack: error.stack,
+        userId,
+        bookingData
+      });
       throw error;
     }
   }

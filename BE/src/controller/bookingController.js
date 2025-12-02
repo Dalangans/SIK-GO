@@ -2,6 +2,7 @@ const BookingRepository = require('../repository/bookingRepository');
 const RoomRepository = require('../repository/roomRepository');
 const { generateBookingRecommendations } = require('../util/geminiService');
 const { successResponse, errorResponse } = require('../util/response');
+const logger = require('../util/logger');
 
 const bookingRepo = new BookingRepository();
 const roomRepo = new RoomRepository();
@@ -11,23 +12,48 @@ const roomRepo = new RoomRepository();
 // @access  Private
 exports.createBooking = async (req, res) => {
   try {
-    const { roomId, startDate, endDate, startTime, endTime, purpose, description, participantCount, proposalId } = req.body;
+    const { roomId, startDate, endDate, startTime, endTime, purpose, description, participantCount, proposalId, kelas } = req.body;
     const userId = req.user.id;
+
+    logger.booking('CREATE BOOKING REQUEST', {
+      userId,
+      roomId,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      purpose,
+      participantCount,
+      kelas
+    });
 
     // Validate required fields
     if (!roomId || !startDate || !endDate || !startTime || !endTime || !purpose || !participantCount) {
+      logger.warn('Missing required fields in booking request', {
+        roomId: !!roomId,
+        startDate: !!startDate,
+        endDate: !!endDate,
+        startTime: !!startTime,
+        endTime: !!endTime,
+        purpose: !!purpose,
+        participantCount: !!participantCount
+      });
       return errorResponse(res, 'Please provide all required fields', 400);
     }
 
     // Check room exists
     const room = await roomRepo.getRoomById(roomId);
     if (!room) {
+      logger.error('Room not found', { roomId });
       return errorResponse(res, 'Room not found', 404);
     }
+
+    logger.info('Room found', { roomId, roomName: room.ruang, capacity: room.kapasitas });
 
     // Check room availability
     const isAvailable = await bookingRepo.checkRoomAvailability(roomId, new Date(startDate), new Date(endDate));
     if (!isAvailable) {
+      logger.warn('Room not available for selected dates', { roomId, startDate, endDate });
       return errorResponse(res, 'Room is not available for selected dates', 400);
     }
 
@@ -39,15 +65,33 @@ exports.createBooking = async (req, res) => {
       endTime,
       purpose,
       description,
-      participantCount,
+      participantCount: parseInt(participantCount),
+      kelas,
       proposal: proposalId || undefined
     };
 
+    logger.info('Creating booking with data', bookingData);
+
     const booking = await bookingRepo.createBooking(userId, bookingData);
+    logger.booking('BOOKING CREATED SUCCESSFULLY', {
+      bookingId: booking._id,
+      userId,
+      roomId,
+      roomName: booking.room?.ruang,
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      status: booking.status
+    });
+    
+    // Booking already populated in repository
     successResponse(res, booking, 'Booking created successfully', 201);
   } catch (error) {
-    console.error('Error creating booking:', error);
-    errorResponse(res, error.message, 500);
+    logger.error('Error creating booking', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
+    errorResponse(res, error.message || 'Failed to create booking', 500);
   }
 };
 

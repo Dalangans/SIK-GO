@@ -17,15 +17,15 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Protected routes
+// Protected routes - HARUS diletakkan lebih dulu sebelum /:id
 router.post('/', protect, createBooking);
 router.get('/my-bookings', protect, getMyBookings);
-router.get('/:id', protect, getBookingById);
-router.put('/:id', protect, updateBooking);
-router.delete('/:id', protect, deleteBooking);
 router.post('/check-availability', protect, checkAvailability);
 router.post('/recommendations', protect, getAIRecommendations);
 router.get('/room/:roomId', protect, getBookingsByRoom);
+router.get('/:id', protect, getBookingById);
+router.put('/:id', protect, updateBooking);
+router.delete('/:id', protect, deleteBooking);
 
 // Admin routes
 router.get('/', protect, getAllBookings);

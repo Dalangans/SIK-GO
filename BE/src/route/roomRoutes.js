@@ -9,6 +9,9 @@ const { protect, authorize } = require('../middleware/auth');
 // Get all rooms - tidak perlu login
 router.get('/', roomController.getAllRooms);
 
+// Get single room by ID - tidak perlu login
+router.get('/:roomId', roomController.getRoomById);
+
 
 // ==================================================================
 // 2. PROTECTED ROUTES (Harus Login / Punya Token)

@@ -2,7 +2,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Helper function untuk get token
-const getToken = () => localStorage.getItem('token');
+const getToken = () => localStorage.getItem('authToken') || localStorage.getItem('token');
 
 // Helper function untuk API requests
 const apiRequest = async (endpoint, method = 'GET', data = null, isFormData = false) => {
@@ -220,4 +220,22 @@ export const proposalEvaluationAPI = {
     formData.append('file', file);
     return apiRequest('/api/proposals-evaluation/evaluate', 'POST', formData, true);
   }
+};
+
+// SIK Document APIs
+export const sikDocumentAPI = {
+  analyzeSIKDocument: (formData) =>
+    apiRequest('/api/sik-documents/analyze', 'POST', formData, true),
+
+  uploadDocument: (formData) =>
+    apiRequest('/api/sik-documents/upload', 'POST', formData, true),
+
+  getDocuments: () =>
+    apiRequest('/api/sik-documents', 'GET'),
+
+  getDocumentById: (id) =>
+    apiRequest(`/api/sik-documents/${id}`, 'GET'),
+
+  deleteDocument: (id) =>
+    apiRequest(`/api/sik-documents/${id}`, 'DELETE')
 };

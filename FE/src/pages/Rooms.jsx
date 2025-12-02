@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { roomAPI } from '../services/api';
 
 export default function Rooms() {
@@ -14,6 +14,8 @@ export default function Rooms() {
   const [fetching, setFetching] = useState(true);
   const [mounted, setMounted] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [selectMode, setSelectMode] = useState(location.state?.selectMode || false);
 
   // Load user data
   useEffect(() => {
@@ -159,8 +161,8 @@ export default function Rooms() {
       </nav>
 
       <header className="rooms-hero">
-        <h1>Room Availability</h1>
-        <p>Check and reserve available rooms at FT UI</p>
+        <h1>{selectMode ? 'Select a Room' : 'Room Availability'}</h1>
+        <p>{selectMode ? 'Choose a room for your reservation' : 'Check and reserve available rooms at FT UI'}</p>
       </header>
 
       <section className="rooms-container">
@@ -281,8 +283,17 @@ export default function Rooms() {
 
                       {user && (
                         <div className="room-actions">
-                          <button className="reserve-btn">
-                            Reserve Room
+                          <button 
+                            className="reserve-btn"
+                            onClick={() => {
+                              if (selectMode) {
+                                navigate('/reserve-room', { state: { roomId: room._id, selectMode: false } });
+                              } else {
+                                navigate('/reserve-room', { state: { roomId: room._id } });
+                              }
+                            }}
+                          >
+                            {selectMode ? 'Select This Room' : 'Reserve Room'}
                           </button>
                         </div>
                       )}
@@ -307,7 +318,7 @@ export default function Rooms() {
 
       <style>{`
         :root {
-          --grad-main: radial-gradient(1100px 720px at 15% 18%, #1c2344 0%, rgba(28,35,68,.75) 40%, rgba(11,15,31,.95) 68%, #06070f 100%);
+          --grad-main: radial-gradient(1400px 900px at 10% 10%, #1a1f42 0%, #0f1429 45%, #0b0e1e 70%, #060712 100%);
           --grad-accent-purple: radial-gradient(800px 520px at 86% 12%, rgba(67,27,87,.55) 0%, rgba(67,27,87,0) 60%);
           --grad-accent-deep: radial-gradient(680px 420px at 20% 88%, rgba(50,22,75,.45) 0%, rgba(50,22,75,0) 60%);
           --grad-link: linear-gradient(90deg,#6ee7f9,#8b5cf6);

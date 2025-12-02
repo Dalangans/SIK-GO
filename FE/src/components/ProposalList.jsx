@@ -3,22 +3,24 @@ import { proposalAPI } from '../services/api';
 
 export default function ProposalList() {
   const [proposals, setProposals] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     loadProposals();
-  }, [filterStatus]);
+  }, []);
 
   const loadProposals = async () => {
-    setLoading(true);
-    setError('');
     try {
-      const data = filterStatus 
-        ? await proposalAPI.getAllProposals(filterStatus)
-        : await proposalAPI.getMyProposals();
-      setProposals(data.data || []);
+      setLoading(true);
+      setError('');
+      const res = await proposalAPI.getMyProposals();
+      if (res.success) {
+        setProposals(res.data || []);
+      } else {
+        setError(res.error || 'Failed to load proposals');
+      }
     } catch (err) {
       setError(err.message || 'Error loading proposals');
     } finally {
@@ -26,192 +28,208 @@ export default function ProposalList() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus proposal ini?')) return;
-
-    try {
-      await proposalAPI.deleteProposal(id);
-      setProposals(proposals.filter(p => p._id !== id));
-    } catch (err) {
-      setError(err.message);
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'approved':
+        return '#4CAF50';
+      case 'rejected':
+        return '#f44336';
+      case 'pending':
+        return '#ff9800';
+      default:
+        return '#999';
     }
   };
 
-  const handleSubmit = async (id) => {
-    if (!window.confirm('Submit proposal ini untuk review?')) return;
-
-    try {
-      await proposalAPI.submitProposal(id);
-      loadProposals();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleAIReview = async (id) => {
-    setLoading(true);
-    try {
-      await proposalAPI.generateAIReview(id);
-      loadProposals();
-      alert('AI Review telah dihasilkan!');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const colors = {
-      draft: '#FF9800',
-      submitted: '#2196F3',
-      reviewing: '#9C27B0',
-      approved: '#4CAF50',
-      rejected: '#F44336'
-    };
-    return (
-      <span style={{
-        backgroundColor: colors[status] || '#999',
-        color: 'white',
-        padding: '4px 8px',
-        borderRadius: '4px',
-        fontSize: '12px'
-      }}>
-        {status.toUpperCase()}
-      </span>
-    );
-  };
-
-  if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+  const filteredProposals = proposals.filter(p => {
+    if (filter === 'all') return true;
+    return p.status === filter;
+  });
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '20px auto', padding: '20px' }}>
-      <h2>Daftar Proposal</h2>
-      
-      {error && <div style={{ color: 'red', padding: '10px', marginBottom: '10px', backgroundColor: '#ffebee', borderRadius: '4px' }}>{error}</div>}
-
-      <div style={{ marginBottom: '20px' }}>
-        <label>Filter Status: </label>
+    <div style={styles.container}>
+      <div style={styles.filterSection}>
+        <label style={styles.filterLabel}>Filter by Status:</label>
         <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          style={{ padding: '8px', marginLeft: '10px' }}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={styles.filterSelect}
         >
-          <option value="">Semua</option>
-          <option value="draft">Draft</option>
-          <option value="submitted">Submitted</option>
+          <option value="all">All Proposals</option>
+          <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
+        <button onClick={loadProposals} style={styles.refreshBtn}>
+          ↻ Refresh
+        </button>
       </div>
 
-      {proposals.length === 0 ? (
-        <p>Belum ada proposal.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: '15px' }}>
-          {proposals.map(proposal => (
-            <div key={proposal._id} style={{
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              padding: '15px',
-              backgroundColor: '#f9f9f9'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 5px 0' }}>{proposal.title}</h3>
-                  <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>
-                    Kategori: {proposal.category}
-                  </p>
-                </div>
-                {getStatusBadge(proposal.status)}
-              </div>
-              
-              <p style={{ margin: '10px 0', color: '#666' }}>{proposal.description}</p>
+      {loading && <div style={styles.loadingState}>Loading proposals...</div>}
 
-              {proposal.aiReview?.score && (
-                <div style={{
-                  backgroundColor: '#e3f2fd',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  marginBottom: '10px'
-                }}>
-                  <strong>AI Score: {proposal.aiReview.score}/100</strong>
-                  <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>
-                    {proposal.aiReview.summary}
-                  </p>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                {proposal.status === 'draft' && (
-                  <>
-                    <button
-                      onClick={() => handleSubmit(proposal._id)}
-                      style={{
-                        backgroundColor: '#2196F3',
-                        color: 'white',
-                        border: 'none',
-                        padding: '5px 15px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      Submit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(proposal._id)}
-                      style={{
-                        backgroundColor: '#F44336',
-                        color: 'white',
-                        border: 'none',
-                        padding: '5px 15px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      Hapus
-                    </button>
-                  </>
-                )}
-                
-                {proposal.status === 'submitted' && !proposal.aiReview?.score && (
-                  <button
-                    onClick={() => handleAIReview(proposal._id)}
-                    style={{
-                      backgroundColor: '#FF9800',
-                      color: 'white',
-                      border: 'none',
-                      padding: '5px 15px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px'
-                    }}
-                  >
-                    💡 Generate AI Review
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+      {error && !loading && (
+        <div style={styles.errorState}>
+          <p>⚠ {error}</p>
+          <button onClick={loadProposals} style={styles.retryBtn}>Retry</button>
         </div>
       )}
 
-      <button
-        onClick={loadProposals}
-        style={{
-          marginTop: '20px',
-          padding: '10px 20px',
-          backgroundColor: '#2196F3',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        Refresh
-      </button>
+      {!loading && !error && (
+        <>
+          {filteredProposals.length > 0 ? (
+            <div style={styles.proposalsList}>
+              {filteredProposals.map((proposal) => (
+                <div key={proposal._id} style={styles.proposalCard}>
+                  <div style={styles.cardHeader}>
+                    <h3 style={styles.cardTitle}>{proposal.title}</h3>
+                    <span
+                      style={{
+                        ...styles.statusBadge,
+                        backgroundColor: getStatusColor(proposal.status)
+                      }}
+                    >
+                      {proposal.status}
+                    </span>
+                  </div>
+
+                  <div style={styles.cardBody}>
+                    <p style={styles.category}>
+                      <strong>Category:</strong> {proposal.category}
+                    </p>
+                    <p style={styles.description}>{proposal.description}</p>
+                    {proposal.createdAt && (
+                      <p style={styles.date}>
+                        <strong>Created:</strong>{' '}
+                        {new Date(proposal.createdAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.emptyState}>
+              <p>No proposals found</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
+
+const styles = {
+  container: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  },
+  filterSection: {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center',
+    marginBottom: '20px',
+    paddingBottom: '15px',
+    borderBottom: '1px solid #eee'
+  },
+  filterLabel: {
+    fontWeight: 'bold',
+    fontSize: '14px'
+  },
+  filterSelect: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    cursor: 'pointer'
+  },
+  refreshBtn: {
+    padding: '8px 12px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  proposalsList: {
+    display: 'grid',
+    gap: '15px'
+  },
+  proposalCard: {
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    padding: '15px',
+    backgroundColor: '#f9f9f9',
+    transition: 'all 0.3s ease'
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+    borderBottom: '1px solid #eee',
+    paddingBottom: '10px'
+  },
+  cardTitle: {
+    margin: '0',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#333'
+  },
+  statusBadge: {
+    padding: '4px 12px',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '12px',
+    fontWeight: 'bold'
+  },
+  cardBody: {
+    fontSize: '14px',
+    color: '#666'
+  },
+  category: {
+    margin: '8px 0',
+    fontWeight: 'bold'
+  },
+  description: {
+    margin: '8px 0',
+    lineHeight: '1.5'
+  },
+  date: {
+    margin: '8px 0',
+    fontSize: '12px',
+    color: '#999'
+  },
+  loadingState: {
+    textAlign: 'center',
+    padding: '40px 20px',
+    color: '#666',
+    fontSize: '14px'
+  },
+  errorState: {
+    backgroundColor: '#ffebee',
+    border: '1px solid #ef5350',
+    color: '#c62828',
+    padding: '15px',
+    borderRadius: '4px',
+    textAlign: 'center'
+  },
+  retryBtn: {
+    marginTop: '10px',
+    padding: '8px 16px',
+    backgroundColor: '#c62828',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: '40px 20px',
+    color: '#999',
+    fontSize: '14px'
+  }
+};

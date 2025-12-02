@@ -18,6 +18,30 @@ exports.getAllRooms = async (req, res) => {
   }
 };
 
+exports.getRoomById = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const room = await roomRepository.getRoomById(roomId);
+    
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        error: 'Room not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: room
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 exports.createRoom = async (req, res) => {
   try {
     const room = await roomRepository.createRoom(req.body);

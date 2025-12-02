@@ -558,21 +558,44 @@ export default function Home() {
         html,body,#root,.home-root { max-width:100vw; overflow-x:hidden; }
         html,body,#root { margin:0; padding:0; }
         body {
-          background: var(--grad-main), var(--grad-accent-purple), var(--grad-accent-deep), linear-gradient(180deg, rgba(67,27,87,.10), rgba(14,20,38,.10));
+          background: radial-gradient(1400px 900px at 10% 10%, #1a1f42 0%, #0f1429 45%, #0b0e1e 70%, #060712 100%);
           font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue";
           -webkit-font-smoothing: antialiased;
           color:#e6e9f5;
           overscroll-behavior-x:none;
         }
 
-        .home-root { padding-top:86px; }
+        .home-root { 
+          padding-top:86px;
+          position: relative;
+          overflow: hidden;
+          isolation: isolate;
+        }
+        
         .home-root::before,
         .home-root::after {
-          content:""; position:fixed; inset:auto; pointer-events:none; width:520px; height:520px;
-          border-radius:50%; filter:blur(120px); opacity:.22; z-index:0;
+          content:""; 
+          position:fixed; 
+          inset:-20%;
+          pointer-events:none; 
+          width:800px; 
+          height:800px;
+          border-radius:50%; 
+          filter:blur(70px); 
+          opacity:.35; 
+          z-index:-1;
+          transform: translateZ(0);
         }
-        .home-root::before { top:-120px; right:-140px; background:radial-gradient(closest-side, rgba(95,43,122,.6), rgba(95,43,122,0)); }
-        .home-root::after { bottom:-140px; left:-180px; background:radial-gradient(closest-side, rgba(50,22,75,.55), rgba(50,22,75,0)); }
+        .home-root::before { 
+          top:-50px; 
+          right:-200px; 
+          background:radial-gradient(circle at 20% 30%, #6ee7f955, transparent 50%); 
+        }
+        .home-root::after { 
+          bottom:-300px; 
+          left:-100px; 
+          background:radial-gradient(circle at 80% 20%, #8b5cf655, transparent 50%); 
+        }
         .topbar,.hero,.doc-scan,.about-us,.contact-block { position:relative; z-index:1; }
 
         /* Topbar & navigation */

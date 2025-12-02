@@ -42,6 +42,10 @@ const BookingSchema = new mongoose.Schema({
     required: true,
     min: 1
   },
+  kelas: {
+    type: String,
+    description: 'Class/Kelas for the booking'
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'cancelled', 'completed'],

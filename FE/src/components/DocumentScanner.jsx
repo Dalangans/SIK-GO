@@ -1,334 +1,375 @@
 import React, { useState } from 'react';
-import { proposalAnalysisAPI } from '../services/api';
+import { sikDocumentAPI } from '../services/api';
 import '../styles/documentScanner.css';
 
-const DocumentScanner = () => {
+export default function DocumentScanner() {
   const [file, setFile] = useState(null);
-  const [fileName, setFileName] = useState('');
-  const [fileSize, setFileSize] = useState('');
-  const [fileType, setFileType] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [extractionResult, setExtractionResult] = useState(null);
-  const [analysisResult, setAnalysisResult] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('upload'); // upload, result
+  const [result, setResult] = useState(null);
+  const [fileName, setFileName] = useState('');
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
       setFileName(selectedFile.name);
-      setFileSize((selectedFile.size / 1024).toFixed(1));
-      setFileType(selectedFile.type);
       setError('');
+      setResult(null);
     }
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.currentTarget.style.backgroundColor = '#e3f2fd';
+  };
+
+  const handleDragLeave = (e) => {
+    e.currentTarget.style.backgroundColor = '#f5f5f5';
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.currentTarget.style.backgroundColor = '#f5f5f5';
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
       setFile(droppedFile);
       setFileName(droppedFile.name);
-      setFileSize((droppedFile.size / 1024).toFixed(1));
-      setFileType(droppedFile.type);
       setError('');
+      setResult(null);
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
     if (!file) {
-      setError('Please select a file first');
+      setError('Please select a file');
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-    setActiveTab('result');
-
     try {
-      // Show extraction simulation first
-      setExtractionResult({
-        status: 'processing',
-        message: 'Extracting text and data from document...',
-        name: fileName,
-        type: fileType,
-        size: `${fileSize} KB`
-      });
+      setLoading(true);
+      setError('');
+      
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Perform complete audit
-      const response = await proposalAnalysisAPI.performCompleteAudit(
-        file,
-        fileName.replace(/\.[^/.]+$/, ''), // Remove extension from name as title
-        'general',
-        ''
-      );
-
-      // Update extraction result with success
-      setExtractionResult({
-        status: 'success',
-        message: 'Extraction completed',
-        name: fileName,
-        type: fileType,
-        size: `${fileSize} KB`,
-        ocrText: 'OCR text will appear here after integrating your API.'
-      });
-
-      // Set analysis result
-      setAnalysisResult(response.data);
+      const res = await sikDocumentAPI.analyzeSIKDocument(formData);
+      
+      if (res.success) {
+        setResult(res.data);
+        setFile(null);
+        setFileName('');
+      } else {
+        setError(res.error || 'Failed to analyze document');
+      }
     } catch (err) {
       setError(err.message || 'Error analyzing document');
-      setExtractionResult({
-        status: 'error',
-        message: err.message || 'Failed to process document'
-      });
+      console.error('Error:', err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleReset = () => {
+  const handleClear = () => {
     setFile(null);
     setFileName('');
-    setFileSize('');
-    setFileType('');
-    setExtractionResult(null);
-    setAnalysisResult(null);
     setError('');
-    setActiveTab('upload');
-  };
-
-  const getFileIcon = () => {
-    if (fileType.includes('pdf')) return '📄';
-    if (fileType.includes('word') || fileType.includes('document')) return '📝';
-    if (fileType.includes('sheet') || fileType.includes('excel')) return '📊';
-    if (fileType.includes('image')) return '🖼️';
-    return '📁';
+    setResult(null);
   };
 
   return (
-    <div className="document-scanner-container">
-      <div className="scanner-header">
-        <h1>📋 Scan / Upload Document</h1>
-        <p>Upload image/PDF, AI extracts text & key data (simulation).</p>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1>📄 Analisis Dokumen SIK</h1>
+        <p>Unggah dokumen untuk analisis otomatis menggunakan AI</p>
       </div>
 
-      {error && (
-        <div className="error-message">
-          ⚠️ {error}
-        </div>
-      )}
-
-      {/* Upload Tab */}
-      {activeTab === 'upload' && (
-        <div className="scanner-content">
-          <div 
-            className="upload-area"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            {file ? (
-              <div className="file-preview">
-                <div className="file-icon">{getFileIcon()}</div>
-                <div className="file-info">
-                  <div className="file-name">{fileName}</div>
-                  <div className="file-details">{fileSize} KB</div>
-                </div>
-                <div className="file-actions">
-                  <button 
-                    className="btn btn-submit"
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Processing...' : 'Submit'}
-                  </button>
-                  <button 
-                    className="btn btn-reset"
-                    onClick={handleReset}
-                    disabled={isLoading}
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="upload-placeholder">
-                <div className="upload-icon">📤</div>
-                <div className="upload-text">
-                  <p className="upload-title">Drop files here or click to select</p>
-                  <p className="upload-subtitle">Supported: PDF, DOC, DOCX, XLS, XLSX, TXT, MD</p>
-                </div>
+      <div style={styles.content}>
+        {!result ? (
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {/* File Upload Area */}
+            <div
+              style={styles.uploadArea}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div style={styles.uploadContent}>
+                <div style={styles.uploadIcon}>📁</div>
+                <h3>Drag and drop file here</h3>
+                <p>or click to select</p>
                 <input
                   type="file"
                   onChange={handleFileChange}
-                  className="file-input"
-                  accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx"
+                  accept=".pdf,.doc,.docx,.txt"
+                  style={styles.hiddenInput}
+                  id="fileInput"
                 />
+                <label htmlFor="fileInput" style={styles.browseBtn}>
+                  Browse Files
+                </label>
+              </div>
+            </div>
+
+            {/* Selected File Info */}
+            {fileName && (
+              <div style={styles.fileInfo}>
+                <span>📄 {fileName}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFile(null);
+                    setFileName('');
+                  }}
+                  style={styles.removeFileBtn}
+                >
+                  ✕
+                </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* Result Tab */}
-      {activeTab === 'result' && extractionResult && (
-        <div className="scanner-content">
-          <div className="extraction-result">
-            <h2>
-              {extractionResult.status === 'success' && '✅ Extraction Result'}
-              {extractionResult.status === 'error' && '❌ Extraction Failed'}
-              {extractionResult.status === 'processing' && '⏳ Processing...'}
-            </h2>
-
-            <div className="result-details">
-              <p><strong>Extraction Status:</strong> {extractionResult.message}</p>
-              {extractionResult.name && (
-                <>
-                  <p><strong>Name:</strong> {extractionResult.name}</p>
-                  <p><strong>Type:</strong> {extractionResult.type}</p>
-                  <p><strong>Size:</strong> {extractionResult.size}</p>
-                </>
-              )}
-            </div>
-
-            {extractionResult.status === 'success' && (
-              <>
-                <div className="ocr-section">
-                  <p className="ocr-label">OCR Text:</p>
-                  <div className="ocr-text">
-                    {extractionResult.ocrText || 'OCR text will appear here after integrating your API.'}
-                  </div>
-                </div>
-
-                {analysisResult && (
-                  <div className="analysis-section">
-                    <h3>📊 AI Analysis Results</h3>
-                    
-                    {analysisResult.auditReport && (
-                      <>
-                        {/* Quality Score */}
-                        {analysisResult.auditReport.analysis?.score && (
-                          <div className="analysis-card">
-                            <h4>Quality Score</h4>
-                            <div className="score-display">
-                              <div className="score-value">
-                                {analysisResult.auditReport.analysis.score}/100
-                              </div>
-                              <div className="score-bar">
-                                <div 
-                                  className="score-fill"
-                                  style={{ 
-                                    width: `${analysisResult.auditReport.analysis.score}%`,
-                                    backgroundColor: getScoreColor(analysisResult.auditReport.analysis.score)
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Structure & Clarity */}
-                        {(analysisResult.auditReport.analysis?.structure || 
-                          analysisResult.auditReport.analysis?.clarity) && (
-                          <div className="analysis-card">
-                            <h4>Document Quality</h4>
-                            <div className="quality-items">
-                              {analysisResult.auditReport.analysis.structure && (
-                                <div className="quality-item">
-                                  <span>Structure:</span>
-                                  <span>{analysisResult.auditReport.analysis.structure}</span>
-                                </div>
-                              )}
-                              {analysisResult.auditReport.analysis.clarity && (
-                                <div className="quality-item">
-                                  <span>Clarity:</span>
-                                  <span>{analysisResult.auditReport.analysis.clarity}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Plagiarism Check */}
-                        {analysisResult.auditReport.plagiarismCheck && (
-                          <div className="analysis-card">
-                            <h4>🔍 Plagiarism Check</h4>
-                            <div className="plagiarism-info">
-                              <p>
-                                <strong>Risk Level:</strong>{' '}
-                                <span className={`risk-${analysisResult.auditReport.plagiarismCheck.riskLevel?.toLowerCase()}`}>
-                                  {analysisResult.auditReport.plagiarismCheck.riskLevel}
-                                </span>
-                              </p>
-                              {analysisResult.auditReport.plagiarismCheck.originalPercentage && (
-                                <p>
-                                  <strong>Original Content:</strong> 
-                                  {analysisResult.auditReport.plagiarismCheck.originalPercentage}%
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Recommendations */}
-                        {analysisResult.auditReport.overallRecommendation && (
-                          <div className="analysis-card recommendation-card">
-                            <h4>📋 Overall Recommendation</h4>
-                            <div className={`recommendation ${analysisResult.auditReport.overallRecommendation.status.toLowerCase()}`}>
-                              <p>
-                                <strong>Status:</strong> {analysisResult.auditReport.overallRecommendation.status}
-                              </p>
-                              <p>
-                                <strong>Reason:</strong> {analysisResult.auditReport.overallRecommendation.reason}
-                              </p>
-                              <p>
-                                <strong>Action:</strong> {analysisResult.auditReport.overallRecommendation.action}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Improvement Suggestions */}
-                        {analysisResult.auditReport.suggestions?.priorityActions && (
-                          <div className="analysis-card">
-                            <h4>💡 Priority Actions</h4>
-                            <ol className="suggestions-list">
-                              {analysisResult.auditReport.suggestions.priorityActions.map((action, idx) => (
-                                <li key={idx}>{action}</li>
-                              ))}
-                            </ol>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-              </>
+            {/* Error Message */}
+            {error && (
+              <div style={styles.errorMessage}>
+                <strong>⚠ Error:</strong> {error}
+              </div>
             )}
 
-            <div className="result-actions">
-              <button className="btn btn-primary" onClick={handleReset}>
-                Upload Another Document
+            {/* Action Buttons */}
+            <div style={styles.actions}>
+              <button
+                type="submit"
+                disabled={!file || loading}
+                style={{
+                  ...styles.submitBtn,
+                  opacity: !file || loading ? 0.6 : 1,
+                  cursor: !file || loading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading ? 'Analyzing...' : 'Analyze Document'}
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                style={styles.clearBtn}
+              >
+                Clear
               </button>
             </div>
+          </form>
+        ) : (
+          <div style={styles.resultSection}>
+            <div style={styles.resultHeader}>
+              <h2>✓ Analysis Result</h2>
+              <button onClick={handleClear} style={styles.backBtn}>
+                ← Analyze Another
+              </button>
+            </div>
+
+            <div style={styles.resultContent}>
+              {result.summary && (
+                <div style={styles.resultBox}>
+                  <h3>Summary</h3>
+                  <p>{result.summary}</p>
+                </div>
+              )}
+
+              {result.status && (
+                <div style={styles.resultBox}>
+                  <h3>Status</h3>
+                  <p style={{ color: result.status === 'valid' ? '#4CAF50' : '#f44336' }}>
+                    {result.status.toUpperCase()}
+                  </p>
+                </div>
+              )}
+
+              {result.issues && result.issues.length > 0 && (
+                <div style={styles.resultBox}>
+                  <h3>Issues Found</h3>
+                  <ul style={styles.issuesList}>
+                    {result.issues.map((issue, idx) => (
+                      <li key={idx}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {result.recommendations && result.recommendations.length > 0 && (
+                <div style={styles.resultBox}>
+                  <h3>Recommendations</h3>
+                  <ul style={styles.recommendationsList}>
+                    {result.recommendations.map((rec, idx) => (
+                      <li key={idx}>{rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
-};
+}
 
-const getScoreColor = (score) => {
-  if (score >= 80) return '#4CAF50';
-  if (score >= 60) return '#FFC107';
-  if (score >= 40) return '#FF9800';
-  return '#F44336';
+const styles = {
+  container: {
+    minHeight: '100vh',
+    backgroundColor: '#f5f5f5',
+    padding: '20px'
+  },
+  header: {
+    backgroundColor: '#2196F3',
+    color: 'white',
+    padding: '30px',
+    borderRadius: '8px',
+    marginBottom: '30px',
+    textAlign: 'center'
+  },
+  content: {
+    maxWidth: '800px',
+    margin: '0 auto'
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px'
+  },
+  uploadArea: {
+    border: '2px dashed #2196F3',
+    borderRadius: '8px',
+    padding: '40px 20px',
+    textAlign: 'center',
+    backgroundColor: '#f5f5f5',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
+  },
+  uploadContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  uploadIcon: {
+    fontSize: '48px',
+    marginBottom: '10px'
+  },
+  hiddenInput: {
+    display: 'none'
+  },
+  browseBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#2196F3',
+    color: 'white',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    marginTop: '10px'
+  },
+  fileInfo: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    padding: '12px 16px',
+    borderRadius: '4px',
+    border: '1px solid #2196F3'
+  },
+  removeFileBtn: {
+    backgroundColor: '#f44336',
+    color: 'white',
+    border: 'none',
+    borderRadius: '50%',
+    width: '24px',
+    height: '24px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  errorMessage: {
+    backgroundColor: '#ffebee',
+    border: '1px solid #ef5350',
+    color: '#c62828',
+    padding: '12px 16px',
+    borderRadius: '4px',
+    fontSize: '14px'
+  },
+  actions: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px'
+  },
+  submitBtn: {
+    padding: '12px 20px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 'bold'
+  },
+  clearBtn: {
+    padding: '12px 20px',
+    backgroundColor: '#757575',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '16px'
+  },
+  resultSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px'
+  },
+  resultHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: '15px',
+    borderBottom: '2px solid #ddd'
+  },
+  backBtn: {
+    padding: '10px 16px',
+    backgroundColor: '#ff9800',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  resultContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px'
+  },
+  resultBox: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    border: '1px solid #ddd',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  },
+  issuesList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  recommendationsList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  }
 };
-
-export default DocumentScanner;

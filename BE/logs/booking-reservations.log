@@ -1,0 +1,75 @@
+[2025-12-02T04:01:29.928Z] [BOOKING] CREATE BOOKING REQUEST
+{
+  "userId": "6916d92a672652878729cd5a",
+  "roomId": "692ddad18b35b77d3c564e98",
+  "startDate": "2025-12-03",
+  "endDate": "2025-12-03",
+  "startTime": "08:00",
+  "endTime": "10:00",
+  "purpose": "gc echA",
+  "participantCount": 24,
+  "kelas": "2023-2"
+}
+
+[2025-12-02T04:01:29.965Z] [INFO] Room found
+{
+  "roomId": "692ddad18b35b77d3c564e98",
+  "roomName": "Area L. Basket Kantek",
+  "capacity": 100
+}
+
+[2025-12-02T04:01:29.998Z] [INFO] Creating booking with data
+{
+  "room": "692ddad18b35b77d3c564e98",
+  "startDate": "2025-12-03T00:00:00.000Z",
+  "endDate": "2025-12-03T00:00:00.000Z",
+  "startTime": "08:00",
+  "endTime": "10:00",
+  "purpose": "gc echA",
+  "description": "dddd",
+  "participantCount": 24,
+  "kelas": "2023-2"
+}
+
+[2025-12-02T04:01:30.002Z] [INFO] [BookingRepo] Saving booking
+{
+  "user": "6916d92a672652878729cd5a",
+  "room": "692ddad18b35b77d3c564e98",
+  "startDate": "2025-12-03T00:00:00.000Z",
+  "endDate": "2025-12-03T00:00:00.000Z",
+  "startTime": "08:00",
+  "endTime": "10:00",
+  "purpose": "gc echA",
+  "description": "dddd",
+  "participantCount": 24,
+  "kelas": "2023-2"
+}
+
+[2025-12-02T04:01:30.058Z] [INFO] [BookingRepo] Booking saved with ID
+{
+  "bookingId": "692e64996e91f15b58d3c363"
+}
+
+[2025-12-02T04:01:30.216Z] [INFO] [BookingRepo] Booking populated successfully
+{
+  "bookingId": "692e64996e91f15b58d3c363"
+}
+
+[2025-12-02T04:01:30.216Z] [BOOKING] BOOKING CREATED SUCCESSFULLY
+{
+  "bookingId": "692e64996e91f15b58d3c363",
+  "userId": "6916d92a672652878729cd5a",
+  "roomId": "692ddad18b35b77d3c564e98",
+  "roomName": "Area L. Basket Kantek",
+  "startDate": "2025-12-03T00:00:00.000Z",
+  "endDate": "2025-12-03T00:00:00.000Z",
+  "status": "pending"
+}
+
+[2025-12-02T04:01:30.217Z] [ERROR] Error creating booking
+{
+  "message": "successResponse is not a function",
+  "stack": "TypeError: successResponse is not a function\n    at exports.createBooking (D:\\Univ\\Semester 5\\RPL\\Proyek\\SIK-GO\\BE\\src\\controller\\bookingController.js:87:5)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)",
+  "userId": "6916d92a672652878729cd5a"
+}
+

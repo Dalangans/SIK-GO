@@ -4,21 +4,21 @@ import { proposalAPI } from '../services/api';
 export default function ProposalForm({ onSuccess }) {
   const [formData, setFormData] = useState({
     title: '',
-    category: 'academic',
+    category: '',
     description: '',
-    content: '',
+    content: ''
   });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
+    setFormData({
+      ...formData,
       [name]: value
-    }));
+    });
   };
 
   const handleFileChange = (e) => {
@@ -27,119 +27,163 @@ export default function ProposalForm({ onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
     setSuccess('');
 
+    if (!formData.title || !formData.category || !formData.description) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
     try {
-      await proposalAPI.createProposal(formData, file);
-      setSuccess('Proposal berhasil dibuat!');
-      setFormData({
-        title: '',
-        category: 'academic',
-        description: '',
-        content: '',
-      });
-      setFile(null);
-      if (onSuccess) onSuccess();
+      setLoading(true);
+      const res = await proposalAPI.createProposal(formData, file);
+      if (res.success) {
+        setSuccess('Proposal created successfully');
+        setFormData({ title: '', category: '', description: '', content: '' });
+        setFile(null);
+        if (onSuccess) onSuccess();
+      } else {
+        setError(res.error || 'Failed to create proposal');
+      }
     } catch (err) {
-      setError(err.message || 'Gagal membuat proposal');
+      setError(err.message || 'Error creating proposal');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '600px', margin: '20px auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <h2>Buat Proposal</h2>
-      
-      {error && <div style={{ color: 'red', padding: '10px', marginBottom: '10px', backgroundColor: '#ffebee', borderRadius: '4px' }}>{error}</div>}
-      {success && <div style={{ color: 'green', padding: '10px', marginBottom: '10px', backgroundColor: '#e8f5e9', borderRadius: '4px' }}>{success}</div>}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label>Judul Proposal *</label>
+    <div style={styles.container}>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Title *</label>
           <input
             type="text"
             name="title"
             value={formData.title}
-            onChange={handleChange}
-            placeholder="Masukkan judul proposal"
+            onChange={handleInputChange}
+            placeholder="Enter proposal title"
+            style={styles.input}
             required
-            style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Kategori *</label>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Category *</label>
           <select
             name="category"
             value={formData.category}
-            onChange={handleChange}
-            style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
+            onChange={handleInputChange}
+            style={styles.input}
+            required
           >
-            <option value="academic">Akademik</option>
-            <option value="event">Event</option>
-            <option value="research">Penelitian</option>
-            <option value="other">Lainnya</option>
+            <option value="">-- Select Category --</option>
+            <option value="research">Research</option>
+            <option value="project">Project</option>
+            <option value="other">Other</option>
           </select>
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Deskripsi Singkat *</label>
-          <input
-            type="text"
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Description *</label>
+          <textarea
             name="description"
             value={formData.description}
-            onChange={handleChange}
-            placeholder="Deskripsi singkat proposal Anda"
+            onChange={handleInputChange}
+            placeholder="Enter proposal description"
+            style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
+            rows={4}
             required
-            style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Konten Proposal *</label>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Content</label>
           <textarea
             name="content"
             value={formData.content}
-            onChange={handleChange}
-            placeholder="Masukkan konten lengkap proposal..."
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px', minHeight: '200px', boxSizing: 'border-box' }}
+            onChange={handleInputChange}
+            placeholder="Enter proposal content (optional)"
+            style={{ ...styles.input, minHeight: '150px', resize: 'vertical' }}
+            rows={6}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>Upload File (Opsional)</label>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Upload File</label>
           <input
             type="file"
             onChange={handleFileChange}
-            accept=".pdf,.doc,.docx,.txt"
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+            style={styles.input}
           />
-          <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>
-            Format: PDF, DOC, DOCX, TXT (Max 10MB)
-          </small>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: loading ? '#ccc' : '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '16px'
-          }}
-        >
-          {loading ? 'Membuat...' : 'Buat Proposal'}
+        {error && <div style={styles.errorMessage}>{error}</div>}
+        {success && <div style={styles.successMessage}>{success}</div>}
+
+        <button type="submit" disabled={loading} style={styles.submitBtn}>
+          {loading ? 'Creating...' : 'Create Proposal'}
         </button>
       </form>
     </div>
   );
 }
+
+const styles = {
+  container: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px'
+  },
+  formGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px'
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: '14px',
+    color: '#333'
+  },
+  input: {
+    padding: '10px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontFamily: 'Arial, sans-serif',
+    boxSizing: 'border-box'
+  },
+  submitBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: 'bold'
+  },
+  errorMessage: {
+    backgroundColor: '#ffebee',
+    border: '1px solid #ef5350',
+    color: '#c62828',
+    padding: '10px',
+    borderRadius: '4px',
+    fontSize: '14px'
+  },
+  successMessage: {
+    backgroundColor: '#e8f5e9',
+    border: '1px solid #66bb6a',
+    color: '#2e7d32',
+    padding: '10px',
+    borderRadius: '4px',
+    fontSize: '14px'
+  }
+};
