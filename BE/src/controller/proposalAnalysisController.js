@@ -8,7 +8,6 @@ const {
   performCompleteAudit
 } = require('../util/geminiProposalService');
 
-// Configure multer for file upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = process.env.UPLOAD_DIR || 'uploads';

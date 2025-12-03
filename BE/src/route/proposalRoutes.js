@@ -1,57 +1,37 @@
 const express = require('express');
-const {
-  createProposal,
-  getAllProposals,
-  getMyProposals,
-  getProposalById,
-  updateProposal,
-  submitProposal,
-  generateAIReview,
-  manualReview,
-  deleteProposal,
-  getProposalsNeedingReview
-} = require('../controller/proposalController');
+const proposalController = require('../controller/proposalController');
 const { protect } = require('../middleware/auth');
-const multer = require('multer');
-const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
+const { upload } = proposalController;
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: 'uploads/proposals/',
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
+// Create upload directory if not exists
+const uploadDir = 'uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ['application/pdf', 'application/msword', 'text/plain'];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type'));
-    }
-  }
-});
+// ===== Routes TANPA parameter ID =====
+router.post('/', protect, upload.single('file'), proposalController.createProposal);
+router.get('/', protect, proposalController.getAllProposals);
+router.get('/my-proposals', protect, proposalController.getMyProposals);
+router.get('/review/pending', protect, proposalController.getProposalsNeedingReview);
 
-// Public routes (none for proposals)
+// Analysis & Evaluation routes
+router.post('/summary', protect, upload.single('file'), proposalController.generateSummaryHandler);
+router.post('/evaluate', protect, upload.single('file'), proposalController.evaluateProposalHandler);
+router.post('/analyze', protect, upload.single('file'), proposalController.analyzeProposal);
+router.post('/check-plagiarism', protect, upload.single('file'), proposalController.checkProposalPlagiarism);
+router.post('/suggestions', protect, upload.single('file'), proposalController.getImprovementSuggestions);
+router.post('/audit', protect, upload.single('file'), proposalController.auditProposal);
 
-// Protected routes
-router.post('/', protect, upload.single('file'), createProposal);
-router.get('/my-proposals', protect, getMyProposals);
-router.get('/:id', protect, getProposalById);
-router.put('/:id', protect, upload.single('file'), updateProposal);
-router.delete('/:id', protect, deleteProposal);
-router.put('/:id/submit', protect, submitProposal);
-router.post('/:id/ai-review', protect, generateAIReview);
-router.post('/:id/manual-review', protect, manualReview);
-
-// Admin routes
-router.get('/', protect, getAllProposals);
-router.get('/review/pending', protect, getProposalsNeedingReview);
+// ===== Routes DENGAN parameter ID =====
+router.get('/:id', protect, proposalController.getProposalById);
+router.put('/:id', protect, upload.single('file'), proposalController.updateProposal);
+router.delete('/:id', protect, proposalController.deleteProposal);
+router.put('/:id/submit', protect, proposalController.submitProposal);
+router.post('/:id/ai-review', protect, proposalController.generateAIReview);
+router.post('/:id/manual-review', protect, proposalController.manualReview);
 
 module.exports = router;

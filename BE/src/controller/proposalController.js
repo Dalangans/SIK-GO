@@ -1,14 +1,59 @@
 const ProposalRepository = require('../repository/proposalRepository');
 const { generateProposalReview, chatWithAI } = require('../util/geminiService');
+const {
+  analyzeProposalFile,
+  checkPlagiarism,
+  generateImprovementSuggestions,
+  performCompleteAudit
+} = require('../util/geminiProposalService');
 const { successResponse, errorResponse } = require('../util/response');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 
 const proposalRepo = new ProposalRepository();
 
-// @desc    Create new proposal
-// @route   POST /api/proposals
-// @access  Private
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedMimes = [
+    'text/plain',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/markdown',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ];
+
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`File type ${file.mimetype} not supported`), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
+
+// ==================== ORIGINAL PROPOSAL FUNCTIONS ====================
+
 exports.createProposal = async (req, res) => {
   try {
     const { title, category, description, content } = req.body;
@@ -26,7 +71,6 @@ exports.createProposal = async (req, res) => {
       status: 'draft'
     };
 
-    // If file uploaded
     if (req.file) {
       proposalData.filePath = req.file.path;
       proposalData.mimeType = req.file.mimetype;
@@ -40,9 +84,6 @@ exports.createProposal = async (req, res) => {
   }
 };
 
-// @desc    Get all proposals (admin only)
-// @route   GET /api/proposals
-// @access  Private/Admin
 exports.getAllProposals = async (req, res) => {
   try {
     const { status } = req.query;
@@ -56,9 +97,6 @@ exports.getAllProposals = async (req, res) => {
   }
 };
 
-// @desc    Get my proposals
-// @route   GET /api/proposals/my-proposals
-// @access  Private
 exports.getMyProposals = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -70,9 +108,6 @@ exports.getMyProposals = async (req, res) => {
   }
 };
 
-// @desc    Get single proposal
-// @route   GET /api/proposals/:id
-// @access  Private
 exports.getProposalById = async (req, res) => {
   try {
     const proposal = await proposalRepo.getProposalById(req.params.id);
@@ -81,7 +116,6 @@ exports.getProposalById = async (req, res) => {
       return errorResponse(res, 'Proposal not found', 404);
     }
 
-    // Check authorization
     if (proposal.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized to view this proposal', 403);
     }
@@ -93,9 +127,6 @@ exports.getProposalById = async (req, res) => {
   }
 };
 
-// @desc    Update proposal
-// @route   PUT /api/proposals/:id
-// @access  Private
 exports.updateProposal = async (req, res) => {
   try {
     let proposal = await proposalRepo.getProposalById(req.params.id);
@@ -104,12 +135,10 @@ exports.updateProposal = async (req, res) => {
       return errorResponse(res, 'Proposal not found', 404);
     }
 
-    // Check authorization
     if (proposal.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized to update this proposal', 403);
     }
 
-    // Don't allow update if already approved/rejected
     if (proposal.status === 'approved' || proposal.status === 'rejected') {
       return errorResponse(res, 'Cannot update already reviewed proposal', 400);
     }
@@ -122,7 +151,6 @@ exports.updateProposal = async (req, res) => {
     };
 
     if (req.file) {
-      // Delete old file jika ada
       if (proposal.filePath) {
         fs.unlink(proposal.filePath, (err) => {
           if (err) console.error('Error deleting old file:', err);
@@ -140,9 +168,6 @@ exports.updateProposal = async (req, res) => {
   }
 };
 
-// @desc    Submit proposal for review
-// @route   PUT /api/proposals/:id/submit
-// @access  Private
 exports.submitProposal = async (req, res) => {
   try {
     let proposal = await proposalRepo.getProposalById(req.params.id);
@@ -170,9 +195,6 @@ exports.submitProposal = async (req, res) => {
   }
 };
 
-// @desc    Generate AI Review
-// @route   POST /api/proposals/:id/ai-review
-// @access  Private/Admin
 exports.generateAIReview = async (req, res) => {
   try {
     let proposal = await proposalRepo.getProposalById(req.params.id);
@@ -185,10 +207,8 @@ exports.generateAIReview = async (req, res) => {
       return errorResponse(res, 'Cannot review draft proposal. Submit it first.', 400);
     }
 
-    // Generate AI review
     const aiReview = await generateProposalReview(proposal.content, proposal.category);
 
-    // Update proposal with AI review
     proposal = await proposalRepo.updateAIReview(req.params.id, aiReview);
 
     successResponse(res, proposal, 'AI review generated successfully');
@@ -198,9 +218,6 @@ exports.generateAIReview = async (req, res) => {
   }
 };
 
-// @desc    Manual review by admin
-// @route   POST /api/proposals/:id/manual-review
-// @access  Private/Admin
 exports.manualReview = async (req, res) => {
   try {
     const { comments, status } = req.body;
@@ -232,9 +249,6 @@ exports.manualReview = async (req, res) => {
   }
 };
 
-// @desc    Delete proposal
-// @route   DELETE /api/proposals/:id
-// @access  Private
 exports.deleteProposal = async (req, res) => {
   try {
     const proposal = await proposalRepo.getProposalById(req.params.id);
@@ -247,7 +261,6 @@ exports.deleteProposal = async (req, res) => {
       return errorResponse(res, 'Not authorized', 403);
     }
 
-    // Delete file if exists
     if (proposal.filePath) {
       fs.unlink(proposal.filePath, (err) => {
         if (err) console.error('Error deleting file:', err);
@@ -262,9 +275,6 @@ exports.deleteProposal = async (req, res) => {
   }
 };
 
-// @desc    Get proposals needing review
-// @route   GET /api/proposals/review/pending
-// @access  Private/Admin
 exports.getProposalsNeedingReview = async (req, res) => {
   try {
     const proposals = await proposalRepo.getProposalsNeedingReview();
@@ -274,3 +284,177 @@ exports.getProposalsNeedingReview = async (req, res) => {
     errorResponse(res, error.message, 500);
   }
 };
+
+exports.generateSummaryHandler = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    const { title = '' } = req.body;
+    const filePath = req.file.path;
+
+    console.log('[Proposal Summary] Analyzing file:', req.file.originalname);
+
+    const result = await analyzeProposalFile(filePath, title);
+
+    successResponse(res, result, 'Proposal summary generated successfully');
+
+  } catch (error) {
+    console.error('[Proposal Summary] Error:', error.message);
+    
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    errorResponse(res, error.message, 500);
+  }
+};
+
+exports.evaluateProposalHandler = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    const { title = '', type = 'general', author = '' } = req.body;
+    const filePath = req.file.path;
+
+    console.log('[Proposal Evaluation] Starting evaluation for:', req.file.originalname);
+
+    const metadata = {
+      title,
+      type,
+      author,
+      fileName: req.file.originalname,
+      fileSize: req.file.size
+    };
+
+    const result = await performCompleteAudit(filePath, metadata);
+
+    successResponse(res, result, 'Proposal evaluation completed successfully');
+
+  } catch (error) {
+    console.error('[Proposal Evaluation] Error:', error.message);
+
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    errorResponse(res, error.message, 500);
+  }
+};
+
+exports.analyzeProposal = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    const { title = '', type = 'general' } = req.body;
+    const filePath = req.file.path;
+
+    console.log('[Proposal Analysis] Analyzing file:', req.file.originalname);
+
+    const result = await analyzeProposalFile(filePath, title);
+
+    successResponse(res, result, 'Proposal analyzed successfully');
+
+  } catch (error) {
+    console.error('[Proposal Analysis] Error:', error.message);
+    
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    errorResponse(res, error.message, 500);
+  }
+};
+
+exports.checkProposalPlagiarism = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    const filePath = req.file.path;
+
+    console.log('[Plagiarism Check] Checking file:', req.file.originalname);
+
+    const result = await checkPlagiarism(filePath);
+
+    successResponse(res, result, 'Plagiarism check completed');
+
+  } catch (error) {
+    console.error('[Plagiarism Check] Error:', error.message);
+
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    errorResponse(res, error.message, 500);
+  }
+};
+
+exports.getImprovementSuggestions = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    const { type = 'general' } = req.body;
+    const filePath = req.file.path;
+
+    console.log('[Suggestions] Generating suggestions for:', req.file.originalname);
+
+    const result = await generateImprovementSuggestions(filePath, type);
+
+    successResponse(res, result, 'Improvement suggestions generated');
+
+  } catch (error) {
+    console.error('[Suggestions] Error:', error.message);
+
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    errorResponse(res, error.message, 500);
+  }
+};
+
+exports.auditProposal = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    const { title = '', type = 'general', author = '' } = req.body;
+    const filePath = req.file.path;
+
+    console.log('[Audit] Starting complete audit for:', req.file.originalname);
+
+    const metadata = {
+      title,
+      type,
+      author,
+      fileName: req.file.originalname,
+      fileSize: req.file.size
+    };
+
+    const result = await performCompleteAudit(filePath, metadata);
+
+    successResponse(res, result, 'Proposal audit completed');
+
+  } catch (error) {
+    console.error('[Audit] Error:', error.message);
+
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    errorResponse(res, error.message, 500);
+  }
+};
+
+// Export upload middleware
+module.exports.upload = upload;

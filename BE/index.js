@@ -63,10 +63,9 @@ const startServer = () => {
 (async () => {
   try {
     await connectDB();
-    console.log('✓ MongoDB connected successfully');
+    console.log('MongoDB connected successfully');
   } catch (err) {
-    console.warn('⚠ MongoDB connection failed:', err?.message);
-    console.log('⚠ Starting server in offline mode (features limited)');
+    console.log('Failed to connect to MongoDB:', err.message);
   }
   startServer();
 })();
