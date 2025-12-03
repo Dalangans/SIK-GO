@@ -157,6 +157,9 @@ export const roomAPI = {
   
   deleteRoom: (id) =>
     apiRequest(`/api/rooms/${id}`, 'DELETE'),
+  // Get available rooms by date
+  getAvailableRoomsByDate: (date) =>
+    apiRequest(`/api/rooms/available/by-date?date=${encodeURIComponent(date)}`, 'GET'),
 };
 
 // User APIs

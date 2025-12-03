@@ -1,6 +1,23 @@
 const Room = require('../database/models/Room');
 
 class RoomRepository {
+  // Get available rooms for a specific date (no conflicting bookings)
+  async getAvailableRoomsByDate(date) {
+    const Booking = require('../database/models/Booking');
+    const checkDate = new Date(date);
+    // Find all bookings that overlap with the date
+    const bookedRoomIds = await Booking.find({
+      status: { $in: ['pending', 'approved', 'completed'] },
+      startDate: { $lte: checkDate },
+      endDate: { $gte: checkDate }
+    }).distinct('room');
+    // Return rooms that are not in the bookedRoomIds and are available
+    return await Room.find({
+      _id: { $nin: bookedRoomIds },
+      isAvailable: true,
+      status: 'tersedia'
+    });
+  }
   async createRoom(roomData) {
     try {
       return await Room.create(roomData);

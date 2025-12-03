@@ -1,3 +1,23 @@
+// Get available rooms for a specific date
+exports.getAvailableRoomsByDate = async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ success: false, error: 'Date is required' });
+    }
+    const availableRooms = await roomRepository.getAvailableRoomsByDate(date);
+    res.status(200).json({
+      success: true,
+      data: availableRooms,
+      count: availableRooms.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
 const RoomRepository = require('../repository/roomRepository');
 
 const roomRepository = new RoomRepository();

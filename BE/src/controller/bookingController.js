@@ -41,6 +41,14 @@ exports.createBooking = async (req, res) => {
       return errorResponse(res, 'Please provide all required fields', 400);
     }
 
+    // Check if user has an approved proposal
+    const Proposal = require('../database/models/Proposal');
+    const approvedProposal = await Proposal.findOne({ user: userId, status: 'approved' });
+    if (!approvedProposal) {
+      logger.warn('User has no approved proposal', { userId });
+      return errorResponse(res, 'You must have an approved proposal before booking a room', 403);
+    }
+
     // Check room exists
     const room = await roomRepo.getRoomById(roomId);
     if (!room) {
@@ -67,7 +75,7 @@ exports.createBooking = async (req, res) => {
       description,
       participantCount: parseInt(participantCount),
       kelas,
-      proposal: proposalId || undefined
+      proposal: proposalId || approvedProposal._id // always link to approved proposal
     };
 
     logger.info('Creating booking with data', bookingData);
