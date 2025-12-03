@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ProposalReviewModal from '../components/ProposalReviewModal';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -11,6 +12,10 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('proposals');
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
+  
+  // Modal states
+  const [selectedProposal, setSelectedProposal] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('sikgo_user') || '{}');
@@ -176,6 +181,17 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleOpenProposalReview = (proposal) => {
+    setSelectedProposal(proposal);
+    setShowModal(true);
+  };
+
+  const handleReviewSubmit = () => {
+    setShowModal(false);
+    setSelectedProposal(null);
+    loadAllProposals();
+  };
+
   return (
     <div className={`admin-root ${mounted ? 'animated' : ''}`}>
       <nav className="topbar">
@@ -264,18 +280,26 @@ export default function AdminDashboard() {
                       </div>
                       <div className="card-actions">
                         <button
+                          onClick={() => handleOpenProposalReview(proposal)}
+                          className="action-btn review-btn"
+                        >
+                          📋 Review & Evaluate
+                        </button>
+                        <button
                           onClick={() => handleStatusChange(proposal._id, 'proposal', 'approved')}
                           disabled={proposal.status === 'approved'}
                           className="action-btn approve-btn"
+                          title="Quick Approve"
                         >
-                          ✓ Approve
+                          ✓
                         </button>
                         <button
                           onClick={() => handleStatusChange(proposal._id, 'proposal', 'rejected')}
                           disabled={proposal.status === 'rejected'}
                           className="action-btn reject-btn"
+                          title="Quick Reject"
                         >
-                          ✕ Reject
+                          ✕
                         </button>
                       </div>
                     </div>
@@ -328,6 +352,17 @@ export default function AdminDashboard() {
           )}
         </div>
       </section>
+
+      {showModal && (
+        <ProposalReviewModal
+          proposal={selectedProposal}
+          onClose={() => {
+            setShowModal(false);
+            setSelectedProposal(null);
+          }}
+          onReviewSubmit={handleReviewSubmit}
+        />
+      )}
 
       <style>{`
         :root {
@@ -691,20 +726,34 @@ export default function AdminDashboard() {
 
         .card-actions {
           display: flex;
-          gap: 10px;
+          gap: 8px;
           margin-top: 10px;
+          flex-wrap: wrap;
         }
 
         .action-btn {
           flex: 1;
-          padding: 10px 12px;
+          min-width: 80px;
+          padding: 8px 10px;
           border: none;
           border-radius: 8px;
           font-weight: 600;
-          font-size: 12px;
+          font-size: 11.5px;
           cursor: pointer;
           transition: all 0.2s;
           font-family: var(--font-stack);
+        }
+
+        .review-btn {
+          flex: 1 1 100%;
+          background: linear-gradient(135deg, #8b5cf6, #6ee7f9);
+          color: #fff;
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .review-btn:hover {
+          filter: brightness(1.05);
+          box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
         }
 
         .approve-btn {
@@ -803,6 +852,13 @@ export default function AdminDashboard() {
           }
           .links {
             gap: 10px;
+          }
+          .card-actions {
+            flex-direction: column;
+          }
+          .action-btn {
+            width: 100%;
+            min-width: auto;
           }
         }
 

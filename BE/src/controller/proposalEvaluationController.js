@@ -128,4 +128,91 @@ exports.evaluateProposalHandler = async (req, res) => {
   }
 };
 
+/**
+ * Generate summary from existing file path (for proposals)
+ */
+exports.generateSummaryByPathHandler = async (req, res) => {
+  try {
+    const { filePath } = req.body;
+    
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        error: 'File path is required',
+      });
+    }
+
+    // Resolve the full path
+    const fullPath = path.join(__dirname, '../../', filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found',
+      });
+    }
+
+    const fileName = path.basename(fullPath);
+    const result = await generateSummary(fullPath, fileName);
+    
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Summary generation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Evaluate proposal from existing file path
+ */
+exports.evaluateProposalByPathHandler = async (req, res) => {
+  try {
+    const { filePath } = req.body;
+    
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        error: 'File path is required',
+      });
+    }
+
+    // Resolve the full path
+    const fullPath = path.join(__dirname, '../../', filePath);
+    
+    console.log('Evaluating proposal:');
+    console.log('  Received filePath:', filePath);
+    console.log('  Resolved fullPath:', fullPath);
+    console.log('  File exists:', fs.existsSync(fullPath));
+    
+    // Check if file exists
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({
+        success: false,
+        error: `File not found at: ${fullPath}`,
+      });
+    }
+
+    const fileName = path.basename(fullPath);
+    const result = await evaluateProposal(fullPath, fileName);
+    
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Proposal evaluation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
 module.exports.upload = upload;

@@ -131,6 +131,12 @@ export const proposalAPI = {
   
   submitManualReview: (id, comments, status) =>
     apiRequest(`/api/proposals/${id}/manual-review`, 'POST', { comments, status }),
+
+  evaluateProposalByPath: (filePath) =>
+    apiRequest('/api/proposals-evaluation/evaluate-by-path', 'POST', { filePath }),
+
+  summarizeProposalByPath: (filePath) =>
+    apiRequest('/api/proposals-evaluation/summary-by-path', 'POST', { filePath }),
   
   getAllProposals: (status = null) => {
     const query = status ? `?status=${status}` : '';
