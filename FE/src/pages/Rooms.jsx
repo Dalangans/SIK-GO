@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { roomAPI } from '../services/api';
+import { roomAPI, proposalAPI } from '../services/api';
 
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
@@ -13,6 +13,8 @@ export default function Rooms() {
   const [user, setUser] = useState(null);
   const [fetching, setFetching] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [hasApprovedProposal, setHasApprovedProposal] = useState(false);
+  const [checkingProposal, setCheckingProposal] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const [selectMode, setSelectMode] = useState(location.state?.selectMode || false);
@@ -22,6 +24,7 @@ export default function Rooms() {
     const token = localStorage.getItem('authToken');
     if (!token) {
       setFetching(false);
+      setCheckingProposal(false);
       return;
     }
     const envBase = import.meta.env.VITE_API_URL?.trim();
@@ -42,17 +45,42 @@ export default function Rooms() {
             role: json.data.role,
             fullName: json.data.name
           }));
+          
+          // Check if user has approved proposal
+          checkUserApprovedProposal(json.data._id, token, base);
         } else {
           localStorage.removeItem('authToken');
           localStorage.removeItem('sikgo_user');
+          setCheckingProposal(false);
         }
       } catch {
         // Network error, silently continue
+        setCheckingProposal(false);
       } finally {
         setFetching(false);
       }
     })();
   }, [navigate]);
+
+  // Check if user has approved proposal
+  const checkUserApprovedProposal = async (userId, token, baseUrl) => {
+    try {
+      const res = await fetch(`${baseUrl}/api/proposals/user/approved`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include'
+      });
+      const json = await res.json().catch(()=>({}));
+      if (res.ok && json.success && json.data) {
+        setHasApprovedProposal(true);
+      } else {
+        setHasApprovedProposal(false);
+      }
+    } catch (err) {
+      setHasApprovedProposal(false);
+    } finally {
+      setCheckingProposal(false);
+    }
+  };
 
   // Animation trigger
   useEffect(() => {
@@ -216,6 +244,18 @@ export default function Rooms() {
             <p>Found <strong>{filteredRooms.length}</strong> room{filteredRooms.length !== 1 ? 's' : ''}</p>
           </div>
 
+          {/* Proposal Approval Warning */}
+          {user && !checkingProposal && !hasApprovedProposal && (
+            <div className="proposal-warning">
+              <div className="warning-icon">⚠️</div>
+              <div className="warning-content">
+                <h3>Proposal Required</h3>
+                <p>You need to submit and get approval for a proposal before booking rooms.</p>
+                <Link to="/" className="warning-link">Back to Home →</Link>
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
           {loading && (
             <div className="loading-state">
@@ -235,7 +275,17 @@ export default function Rooms() {
           {/* Rooms Grid */}
           {!loading && !error && (
             <>
-              {filteredRooms.length > 0 ? (
+              {user && !hasApprovedProposal && !checkingProposal ? (
+                <div className="rooms-blocked-state">
+                  <div className="blocked-icon">🔒</div>
+                  <h3>Room Booking Locked</h3>
+                  <p>To book rooms, you must first submit a proposal and receive approval from the administrator.</p>
+                  <p style={{ fontSize: '13px', color: '#97a2b8', marginTop: '12px' }}>
+                    Once your proposal is approved, the room availability will be displayed here.
+                  </p>
+                  <Link to="/" className="blocked-action-btn">Back to Home</Link>
+                </div>
+              ) : filteredRooms.length > 0 ? (
                 <div className="rooms-grid">
                   {filteredRooms.map((room) => (
                     <div key={room._id || room.ruang} className="room-card">
@@ -456,6 +506,39 @@ export default function Rooms() {
           animation:spin .8s linear infinite;
         }
         @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* Proposal Warning */
+        .proposal-warning {
+          display:flex; gap:16px; padding:20px; border-radius:12px;
+          border-left:4px solid #f59e0b; background:rgba(245,158,11,.1);
+          color:#fbbf24; align-items:flex-start;
+        }
+        .warning-icon { font-size:20px; flex-shrink:0; }
+        .warning-content { display:grid; gap:8px; flex:1; }
+        .warning-content h3 { margin:0; font-size:14px; font-weight:700; color:#fbbf24; }
+        .warning-content p { margin:0; font-size:13px; color:rgba(251,191,36,.9); line-height:1.4; }
+        .warning-link {
+          display:inline-flex; align-items:center; gap:6px;
+          color:#fbbf24; text-decoration:none; font-weight:600; font-size:12px;
+          padding:4px 0; transition:.2s;
+        }
+        .warning-link:hover { opacity:.8; }
+
+        /* Rooms Blocked State */
+        .rooms-blocked-state {
+          display:grid; gap:16px; place-items:center; padding:80px 20px;
+          text-align:center;
+        }
+        .blocked-icon { font-size:48px; }
+        .rooms-blocked-state h3 { margin:0; font-size:20px; font-weight:700; color:#fff; }
+        .rooms-blocked-state p { margin:0; font-size:14px; color:var(--color-text-dim); line-height:1.5; max-width:400px; }
+        .blocked-action-btn {
+          display:inline-flex; align-items:center; padding:12px 24px;
+          border-radius:10px; background:linear-gradient(135deg,#6ee7f9,#8b5cf6);
+          color:#0b0f1f; text-decoration:none; font-weight:600; font-size:14px;
+          box-shadow:0 6px 16px -4px rgba(139,92,246,.4); transition:.2s;
+        }
+        .blocked-action-btn:hover { filter:brightness(1.05); transform:translateY(-2px); }
 
         /* Error State */
         .error-state {

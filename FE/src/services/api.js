@@ -145,6 +145,9 @@ export const proposalAPI = {
   
   getProposalsNeedingReview: () =>
     apiRequest('/api/proposals/review/pending', 'GET'),
+
+  getUserApprovedProposal: () =>
+    apiRequest('/api/proposals/user/approved', 'GET'),
 };
 
 // Room APIs

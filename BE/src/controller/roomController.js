@@ -1,3 +1,6 @@
+const RoomRepository = require('../repository/roomRepository');
+const roomRepository = new RoomRepository();
+
 // Get available rooms for a specific date
 exports.getAvailableRoomsByDate = async (req, res) => {
   try {
@@ -18,9 +21,7 @@ exports.getAvailableRoomsByDate = async (req, res) => {
     });
   }
 };
-const RoomRepository = require('../repository/roomRepository');
 
-const roomRepository = new RoomRepository();
 
 exports.getAllRooms = async (req, res) => {
   try {

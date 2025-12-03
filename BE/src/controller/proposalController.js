@@ -514,5 +514,26 @@ exports.auditProposal = async (req, res) => {
   }
 };
 
+// Check if user has approved proposal
+exports.getUserApprovedProposal = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    
+    const proposal = await proposalRepo.findOne({
+      user: userId,
+      status: 'approved'
+    });
+
+    if (proposal) {
+      successResponse(res, proposal, 'User has approved proposal');
+    } else {
+      successResponse(res, null, 'No approved proposal found');
+    }
+  } catch (error) {
+    console.error('[getUserApprovedProposal] Error:', error.message);
+    errorResponse(res, error.message, 500);
+  }
+};
+
 // Export upload middleware
 module.exports.upload = upload;

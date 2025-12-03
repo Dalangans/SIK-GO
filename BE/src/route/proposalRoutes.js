@@ -30,6 +30,9 @@ router.post('/check-plagiarism', protect, upload.single('file'), proposalControl
 router.post('/suggestions', protect, upload.single('file'), proposalController.getImprovementSuggestions);
 router.post('/audit', protect, upload.single('file'), proposalController.auditProposal);
 
+// Check if user has approved proposal
+router.get('/user/approved', protect, proposalController.getUserApprovedProposal);
+
 // ===== Routes DENGAN parameter ID =====
 router.get('/:id', protect, proposalController.getProposalById);
 router.put('/:id', protect, upload.single('file'), proposalController.updateProposal);
