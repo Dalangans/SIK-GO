@@ -96,22 +96,43 @@ export default function Bookings() {
           --color-text: #cfd6e4;
           --color-text-dim: #97a2b8;
           --color-white: #ffffff;
+          --font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+        }
+
+        body {
+          background: var(--grad-main);
+          font-family: var(--font-stack);
+          -webkit-font-smoothing: antialiased;
+          color: #e6e9f5;
+          overscroll-behavior-x: none;
         }
 
         .bookings-root {
           background: var(--grad-main);
           color: var(--color-text);
           min-height: 100vh;
+          width: 100%;
           padding-top: 60px;
           padding-bottom: 70px;
-          position: relative;
-          overflow: hidden;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          font-family: var(--font-stack);
         }
 
         .bookings-root::before,
         .bookings-root::after {
           content: "";
-          position: absolute;
+          position: fixed;
           width: 800px;
           height: 800px;
           border-radius: 50%;

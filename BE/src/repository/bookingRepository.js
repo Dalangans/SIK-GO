@@ -37,7 +37,7 @@ class BookingRepository {
     try {
       return await Booking.find(filter)
         .populate('user', 'email name')
-        .populate('room', 'roomName')
+        .populate('room')
         .populate('proposal', 'title')
         .populate('approvedBy', 'email name')
         .sort({ startDate: -1 });
@@ -50,7 +50,7 @@ class BookingRepository {
   async getBookingsByUser(userId) {
     try {
       return await Booking.find({ user: userId })
-        .populate('room', 'roomName')
+        .populate('room')
         .populate('proposal', 'title')
         .sort({ startDate: -1 });
     } catch (error) {

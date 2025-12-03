@@ -4,28 +4,43 @@ import { useNavigate } from 'react-router-dom';
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [proposals, setProposals] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('proposals');
   const [user, setUser] = useState(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Cek apakah user adalah admin
     const userData = JSON.parse(localStorage.getItem('sikgo_user') || '{}');
     if (userData.role !== 'admin') {
       navigate('/login');
       return;
     }
     setUser(userData);
-    loadAllProposals();
   }, [navigate]);
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      if (activeTab === 'proposals') {
+        loadAllProposals();
+      } else {
+        loadAllBookings();
+      }
+    }
+  }, [activeTab, user]);
 
   const loadAllProposals = async () => {
     try {
       setLoading(true);
       setError('');
       const token = localStorage.getItem('authToken');
-      
       if (!token) {
         setError('No authentication token found');
         setLoading(false);
@@ -35,8 +50,6 @@ export default function AdminDashboard() {
       const envBase = import.meta.env.VITE_API_URL?.trim();
       const base = (envBase && envBase !== '') ? envBase.replace(/\/+$/, '') : 'http://localhost:3000';
       
-      console.log('Loading proposals from:', `${base}/api/proposal/admin/all`);
-      
       const res = await fetch(`${base}/api/proposals/admin/all`, {
         method: 'GET',
         headers: {
@@ -45,18 +58,49 @@ export default function AdminDashboard() {
         }
       });
 
-      console.log('Response status:', res.status);
       const json = await res.json().catch(() => ({}));
-      console.log('Response data:', json);
-
       if (res.ok && json.success) {
         setProposals(json.data || []);
       } else {
-        setError(json.error || json.message || `Failed to load proposals (${res.status})`);
+        setError(json.error || json.message || `Failed to load proposals`);
       }
     } catch (err) {
-      console.error('Error:', err);
       setError(err.message || 'Error loading proposals');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAllBookings = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setError('No authentication token found');
+        setLoading(false);
+        return;
+      }
+
+      const envBase = import.meta.env.VITE_API_URL?.trim();
+      const base = (envBase && envBase !== '') ? envBase.replace(/\/+$/, '') : 'http://localhost:3000';
+      
+      const res = await fetch(`${base}/api/bookings`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
+        setBookings(json.data || []);
+      } else {
+        setError(json.error || json.message || `Failed to load bookings`);
+      }
+    } catch (err) {
+      setError(err.message || 'Error loading bookings');
     } finally {
       setLoading(false);
     }
@@ -70,23 +114,41 @@ export default function AdminDashboard() {
         return '#f44336';
       case 'pending':
         return '#ff9800';
+      case 'completed':
+        return '#2196F3';
       default:
         return '#999';
     }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('sikgo_user');
+    navigate('/login', { replace: true });
+  };
+
+  const displayName = user
+    ? (user.fullName || user.name || (user.email ? user.email.split('@')[0].replace(/[._-]/g, ' ') : 'User'))
+    : 'Guest';
 
   const filteredProposals = proposals.filter(p => {
     if (filter === 'all') return true;
     return p.status === filter;
   });
 
-  const handleStatusChange = async (proposalId, newStatus) => {
+  const filteredBookings = bookings.filter(b => {
+    if (filter === 'all') return true;
+    return b.status === filter;
+  });
+
+  const handleStatusChange = async (id, type, newStatus) => {
     try {
       const token = localStorage.getItem('authToken');
       const envBase = import.meta.env.VITE_API_URL?.trim();
       const base = (envBase && envBase !== '') ? envBase.replace(/\/+$/, '') : 'http://localhost:3000';
+      const endpoint = type === 'proposal' ? `/api/proposals/${id}/status` : `/api/bookings/${id}`;
 
-      const res = await fetch(`${base}/api/proposals/${proposalId}/status`, {
+      const res = await fetch(`${base}${endpoint}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -97,343 +159,662 @@ export default function AdminDashboard() {
 
       const json = await res.json().catch(() => ({}));
       if (res.ok && json.success) {
-        // Update proposal di local state
-        setProposals(proposals.map(p => 
-          p._id === proposalId ? { ...p, status: newStatus } : p
-        ));
+        if (type === 'proposal') {
+          setProposals(proposals.map(p => 
+            p._id === id ? { ...p, status: newStatus } : p
+          ));
+        } else {
+          setBookings(bookings.map(b => 
+            b._id === id ? { ...b, status: newStatus } : b
+          ));
+        }
       } else {
-        alert(json.error || 'Failed to update proposal');
+        setError(json.error || 'Failed to update');
       }
     } catch (err) {
-      alert('Error updating proposal');
+      setError('Error updating');
     }
   };
 
-  if (loading) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <h1>Admin Dashboard</h1>
-          <p>Welcome, {user?.name || 'Admin'}</p>
-        </div>
-        <div style={styles.loadingContainer}>
-          <p>Loading proposals...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.headerContent}>
-          <div>
-            <h1>Admin Dashboard</h1>
-            <p>Welcome, {user?.name || 'Admin'}</p>
-          </div>
-          <div style={styles.userInfo}>
-            <span style={styles.role}>👤 {user?.role?.toUpperCase()}</span>
-            <span style={styles.email}>{user?.email}</span>
-          </div>
+    <div className={`admin-root ${mounted ? 'animated' : ''}`}>
+      <nav className="topbar">
+        <div className="logo">
+          <img src="/Icon.svg" alt="Logo" className="logo-icon" />
+          <span className="logo-text">SIK-GO Admin</span>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div style={styles.mainContent}>
-        {/* Stats Section */}
-        <div style={styles.statsGrid}>
-          <div style={{ ...styles.statCard, borderLeftColor: '#ff9800' }}>
-            <div style={styles.statNumber}>
-              {proposals.filter(p => p.status === 'pending').length}
-            </div>
-            <div style={styles.statLabel}>Pending</div>
-          </div>
-          <div style={{ ...styles.statCard, borderLeftColor: '#4CAF50' }}>
-            <div style={styles.statNumber}>
-              {proposals.filter(p => p.status === 'approved').length}
-            </div>
-            <div style={styles.statLabel}>Approved</div>
-          </div>
-          <div style={{ ...styles.statCard, borderLeftColor: '#f44336' }}>
-            <div style={styles.statNumber}>
-              {proposals.filter(p => p.status === 'rejected').length}
-            </div>
-            <div style={styles.statLabel}>Rejected</div>
-          </div>
-          <div style={{ ...styles.statCard, borderLeftColor: '#2196F3' }}>
-            <div style={styles.statNumber}>
-              {proposals.length}
-            </div>
-            <div style={styles.statLabel}>Total</div>
-          </div>
+        <div className="links">
+          <span className="welcome">Welcome, {displayName}</span>
+          <span className="role-badge">👤 {user?.role?.toUpperCase()}</span>
+          <button type="button" className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
+      </nav>
 
-        {/* Filter Section */}
-        <div style={styles.filterSection}>
-          <label style={styles.filterLabel}>Filter by Status:</label>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            style={styles.filterSelect}
-          >
-            <option value="all">All</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
+      <header className="admin-hero">
+        <h1>Admin Dashboard</h1>
+        <p>Manage proposals and bookings</p>
+      </header>
 
-        {/* Error Message */}
-        {error && (
-          <div style={styles.errorContainer}>
-            <p>{error}</p>
+      <section className="admin-container">
+        <div className="admin-wrapper">
+          {error && (
+            <div className="error-banner">
+              <p>⚠ {error}</p>
+              <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>✕</button>
+            </div>
+          )}
+
+          <div className="tabs-section">
+            <button
+              onClick={() => {
+                setActiveTab('proposals');
+                setFilter('all');
+              }}
+              className={`tab-btn ${activeTab === 'proposals' ? 'active' : ''}`}
+            >
+              Proposals
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('bookings');
+                setFilter('all');
+              }}
+              className={`tab-btn ${activeTab === 'bookings' ? 'active' : ''}`}
+            >
+              Bookings
+            </button>
           </div>
-        )}
 
-        {/* Proposals Table */}
-        {filteredProposals.length === 0 ? (
-          <div style={styles.emptyState}>
-            <p>No proposals found</p>
+          <div className="filter-bar">
+            <label>Filter by Status:</label>
+            <select value={filter} onChange={(e) => setFilter(e.target.value)} className="filter-select">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              {activeTab === 'bookings' && <option value="completed">Completed</option>}
+              {activeTab === 'bookings' && <option value="cancelled">Cancelled</option>}
+            </select>
+            <button onClick={() => activeTab === 'proposals' ? loadAllProposals() : loadAllBookings()} className="refresh-btn">
+              ↻ Refresh
+            </button>
           </div>
-        ) : (
-          <div style={styles.tableContainer}>
-            <table style={styles.table}>
-              <thead style={styles.thead}>
-                <tr>
-                  <th style={styles.th}>No</th>
-                  <th style={styles.th}>Title</th>
-                  <th style={styles.th}>Student Name</th>
-                  <th style={styles.th}>Student Email</th>
-                  <th style={styles.th}>Description</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Upload Date</th>
-                  <th style={styles.th}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProposals.map((proposal, idx) => (
-                  <tr key={proposal._id} style={styles.tr}>
-                    <td style={styles.td}>{idx + 1}</td>
-                    <td style={styles.td}>
-                      <strong>{proposal.title || 'N/A'}</strong>
-                    </td>
-                    <td style={styles.td}>
-                      {proposal.user?.name || 'Unknown User'}
-                    </td>
-                    <td style={styles.td}>
-                      {proposal.user?.email || 'Unknown Email'}
-                    </td>
-                    <td style={{ ...styles.td, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {proposal.description || 'No description'}
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.statusBadge,
-                        backgroundColor: getStatusColor(proposal.status),
-                        color: 'white',
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        {proposal.status?.toUpperCase() || 'PENDING'}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      {new Date(proposal.createdAt).toLocaleDateString()}
-                    </td>
-                    <td style={styles.td}>
-                      <div style={styles.actionButtons}>
+
+          {loading && <div className="loading-state">Loading {activeTab}...</div>}
+
+          {!loading && (
+            <div className="data-grid">
+              {activeTab === 'proposals' ? (
+                filteredProposals.length > 0 ? (
+                  filteredProposals.map((proposal) => (
+                    <div key={proposal._id} className="data-card">
+                      <div className="card-header">
+                        <div>
+                          <h3>{proposal.title}</h3>
+                          <p className="card-meta">{proposal.user?.name || 'Unknown'}</p>
+                        </div>
+                        <span className="status-badge" style={{ backgroundColor: getStatusColor(proposal.status) }}>
+                          {proposal.status?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="card-body">
+                        <p><strong>Email:</strong> {proposal.user?.email || 'N/A'}</p>
+                        <p><strong>Description:</strong> {proposal.description || 'No description'}</p>
+                        <p><strong>Date:</strong> {new Date(proposal.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="card-actions">
                         <button
-                          onClick={() => handleStatusChange(proposal._id, 'approved')}
-                          style={{
-                            ...styles.actionBtn,
-                            backgroundColor: '#4CAF50',
-                            opacity: proposal.status === 'approved' ? 0.5 : 1,
-                            cursor: proposal.status === 'approved' ? 'not-allowed' : 'pointer'
-                          }}
+                          onClick={() => handleStatusChange(proposal._id, 'proposal', 'approved')}
                           disabled={proposal.status === 'approved'}
-                          title="Approve"
+                          className="action-btn approve-btn"
                         >
-                          ✓
+                          ✓ Approve
                         </button>
                         <button
-                          onClick={() => handleStatusChange(proposal._id, 'rejected')}
-                          style={{
-                            ...styles.actionBtn,
-                            backgroundColor: '#f44336',
-                            opacity: proposal.status === 'rejected' ? 0.5 : 1,
-                            cursor: proposal.status === 'rejected' ? 'not-allowed' : 'pointer'
-                          }}
+                          onClick={() => handleStatusChange(proposal._id, 'proposal', 'rejected')}
                           disabled={proposal.status === 'rejected'}
-                          title="Reject"
+                          className="action-btn reject-btn"
                         >
-                          ✕
+                          ✕ Reject
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-state">No proposals found</div>
+                )
+              ) : (
+                filteredBookings.length > 0 ? (
+                  filteredBookings.map((booking) => (
+                    <div key={booking._id} className="data-card">
+                      <div className="card-header">
+                        <div>
+                          <h3>{booking.room?.ruang || 'Unknown Room'}</h3>
+                          <p className="card-meta">{booking.purpose}</p>
+                        </div>
+                        <span className="status-badge" style={{ backgroundColor: getStatusColor(booking.status) }}>
+                          {booking.status?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="card-body">
+                        <p><strong>User:</strong> {booking.user?.name || 'Unknown'}</p>
+                        <p><strong>Date:</strong> {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}</p>
+                        <p><strong>Time:</strong> {booking.startTime} - {booking.endTime}</p>
+                        <p><strong>Participants:</strong> {booking.participantCount}</p>
+                      </div>
+                      <div className="card-actions">
+                        <button
+                          onClick={() => handleStatusChange(booking._id, 'booking', 'approved')}
+                          disabled={booking.status === 'approved'}
+                          className="action-btn approve-btn"
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(booking._id, 'booking', 'rejected')}
+                          disabled={booking.status === 'rejected'}
+                          className="action-btn reject-btn"
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-state">No bookings found</div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <style>{`
+        :root {
+          --grad-main: radial-gradient(1400px 900px at 10% 10%, #1a1f42 0%, #0f1429 45%, #0b0e1e 70%, #060712 100%);
+          --grad-accent-purple: radial-gradient(800px 520px at 86% 12%, rgba(67,27,87,.55) 0%, rgba(67,27,87,0) 60%);
+          --grad-accent-deep: radial-gradient(680px 420px at 20% 88%, rgba(50,22,75,.45) 0%, rgba(50,22,75,0) 60%);
+          --grad-link: linear-gradient(90deg,#6ee7f9,#8b5cf6);
+          --panel-bg: linear-gradient(170deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+          --radius-lg: 20px;
+          --color-text: #cfd6e4;
+          --color-text-dim: #97a2b8;
+          --color-white: #ffffff;
+          --font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+        }
+
+        body {
+          background: var(--grad-main);
+          font-family: var(--font-stack);
+          -webkit-font-smoothing: antialiased;
+          color: #e6e9f5;
+          overscroll-behavior-x: none;
+        }
+
+        .admin-root {
+          background: var(--grad-main);
+          color: var(--color-text);
+          min-height: 100vh;
+          width: 100%;
+          padding-top: 60px;
+          padding-bottom: 70px;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          font-family: var(--font-stack);
+        }
+
+        .admin-root::before,
+        .admin-root::after {
+          content: "";
+          position: fixed;
+          width: 800px;
+          height: 800px;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .admin-root::before {
+          top: -120px;
+          right: -140px;
+          background: var(--grad-accent-purple);
+        }
+
+        .admin-root::after {
+          bottom: -140px;
+          left: -180px;
+          background: var(--grad-accent-deep);
+        }
+
+        /* Topbar */
+        .topbar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 34px;
+          backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.08);
+          z-index: 100;
+        }
+
+        .logo {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .logo-icon {
+          width: 36px;
+          height: 36px;
+        }
+
+        .logo-text {
+          font-weight: 700;
+          font-size: 18px;
+          letter-spacing: 0.5px;
+          background: var(--grad-link);
+          -webkit-background-clip: text;
+          color: transparent;
+        }
+
+        .links {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .welcome {
+          font-size: 13px;
+          font-weight: 500;
+          color: #e6efff;
+        }
+
+        .role-badge {
+          font-size: 13px;
+          font-weight: 600;
+          color: #6ee7f9;
+          background: rgba(110, 231, 249, 0.1);
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1px solid rgba(110, 231, 249, 0.2);
+        }
+
+        .logout-btn {
+          padding: 8px 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: rgba(255, 255, 255, 0.06);
+          color: #e8eef8;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.25s;
+          font-family: var(--font-stack);
+        }
+
+        .logout-btn:hover {
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Hero */
+        .admin-hero {
+          padding: 80px 34px 40px;
+          max-width: 680px;
+          margin: 0 auto;
+          display: grid;
+          gap: 22px;
+          text-align: center;
+          justify-items: center;
+          position: relative;
+          z-index: 1;
+        }
+
+        .admin-hero h1 {
+          margin: 0;
+          font-size: clamp(2.3rem, 5vw, 3.2rem);
+          line-height: 1.25;
+          background: linear-gradient(90deg, #fff, #b5c6ff);
+          -webkit-background-clip: text;
+          color: transparent;
+        }
+
+        .admin-hero p {
+          margin: 0;
+          font-size: 17px;
+          color: #b4bccf;
+          line-height: 1.5;
+        }
+
+        /* Container */
+        .admin-container {
+          padding: 10px 34px 70px;
+          max-width: 1400px;
+          margin: 0 auto;
+          width: 100%;
+          position: relative;
+          z-index: 1;
+        }
+
+        .admin-wrapper {
+          display: grid;
+          gap: 24px;
+        }
+
+        .error-banner {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 15px 20px;
+          background: rgba(244, 67, 54, 0.1);
+          border: 1px solid rgba(244, 67, 54, 0.3);
+          border-radius: 12px;
+          color: #ff7675;
+          font-weight: 500;
+        }
+
+        /* Tabs */
+        .tabs-section {
+          display: flex;
+          gap: 12px;
+          padding-bottom: 20px;
+          border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--color-text);
+          font-weight: 600;
+          font-size: 13.5px;
+          cursor: pointer;
+          transition: all 0.25s;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          font-family: var(--font-stack);
+        }
+
+        .tab-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .tab-btn.active {
+          background: linear-gradient(135deg, #6ee7f9, #8b5cf6);
+          color: #0b0f1f;
+          border-color: transparent;
+          box-shadow: 0 6px 16px -4px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          padding: 15px 20px;
+          background: var(--panel-bg);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          backdrop-filter: blur(10px);
+        }
+
+        .filter-bar label {
+          color: var(--color-text);
+          font-weight: 600;
+          font-size: 13px;
+          white-space: nowrap;
+        }
+
+        .filter-select {
+          padding: 8px 12px;
+          border: 1px solid rgba(110, 231, 249, 0.2);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--color-text);
+          font-weight: 500;
+          font-size: 13px;
+          cursor: pointer;
+          font-family: var(--font-stack);
+          flex: 1;
+          max-width: 200px;
+        }
+
+        .filter-select option {
+          background: #0b0f1f;
+          color: var(--color-text);
+        }
+
+        .refresh-btn {
+          padding: 8px 14px;
+          background: linear-gradient(135deg, #6ee7f9, #8b5cf6);
+          color: #0b0f1f;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.25s;
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+          font-family: var(--font-stack);
+        }
+
+        .refresh-btn:hover {
+          filter: brightness(1.1);
+          box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Data Grid */
+        .data-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+          gap: 20px;
+        }
+
+        .data-card {
+          background: var(--panel-bg);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          padding: 20px;
+          backdrop-filter: blur(10px);
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+          transition: all 0.3s ease;
+        }
+
+        .data-card:hover {
+          border-color: rgba(110, 231, 249, 0.3);
+          box-shadow: 0 8px 32px rgba(110, 231, 249, 0.1);
+        }
+
+        .card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 15px;
+        }
+
+        .card-header h3 {
+          margin: 0 0 6px 0;
+          font-size: 16px;
+          color: #fff;
+          line-height: 1.3;
+        }
+
+        .card-meta {
+          margin: 0;
+          font-size: 12px;
+          color: var(--color-text-dim);
+        }
+
+        .status-badge {
+          padding: 6px 12px;
+          border-radius: 12px;
+          color: white;
+          font-size: 11px;
+          font-weight: bold;
+          white-space: nowrap;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-body {
+          display: grid;
+          gap: 8px;
+        }
+
+        .card-body p {
+          margin: 0;
+          font-size: 12px;
+          color: var(--color-text);
+          line-height: 1.4;
+        }
+
+        .card-body strong {
+          color: #6ee7f9;
+          font-weight: 600;
+        }
+
+        .card-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 10px;
+        }
+
+        .action-btn {
+          flex: 1;
+          padding: 10px 12px;
+          border: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: var(--font-stack);
+        }
+
+        .approve-btn {
+          background: rgba(76, 175, 80, 0.8);
+          color: #fff;
+          box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .approve-btn:not(:disabled):hover {
+          background: rgba(76, 175, 80, 1);
+          box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+        }
+
+        .reject-btn {
+          background: rgba(244, 67, 54, 0.8);
+          color: #fff;
+          box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+
+        .reject-btn:not(:disabled):hover {
+          background: rgba(244, 67, 54, 1);
+          box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+        }
+
+        .action-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .loading-state {
+          text-align: center;
+          padding: 60px 20px;
+          color: var(--color-text-dim);
+          font-size: 15px;
+        }
+
+        .empty-state {
+          grid-column: 1 / -1;
+          text-align: center;
+          padding: 60px 20px;
+          color: var(--color-text-dim);
+          font-size: 15px;
+        }
+
+        /* Animations */
+        .admin-root .admin-hero,
+        .admin-root .admin-container {
+          opacity: 0;
+          transform: translateY(20px) scale(0.97);
+        }
+
+        .admin-root.animated .admin-hero,
+        .admin-root.animated .admin-container {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 0.72, 0.25, 1);
+        }
+
+        .admin-root.animated .admin-hero {
+          transition-delay: 0.05s;
+        }
+
+        .admin-root.animated .admin-container {
+          transition-delay: 0.18s;
+        }
+
+        /* Responsive */
+        @media (max-width: 960px) {
+          .data-grid {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          }
+          .admin-container {
+            padding: 10px 22px 50px;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .topbar {
+            padding: 12px 18px;
+          }
+          .admin-hero {
+            padding: 60px 18px 30px;
+          }
+          .admin-container {
+            padding: 10px 18px 40px;
+          }
+          .data-grid {
+            grid-template-columns: 1fr;
+          }
+          .filter-bar {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .filter-select {
+            max-width: 100%;
+          }
+          .links {
+            gap: 10px;
+          }
+        }
+
+        @media (max-width: 460px) {
+          .logo-text {
+            display: none;
+          }
+          .welcome {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#2c3e50',
-    color: 'white',
-    padding: '30px 20px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-  },
-  headerContent: {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  userInfo: {
-    display: 'flex',
-    gap: '20px',
-    alignItems: 'center',
-  },
-  role: {
-    backgroundColor: '#4CAF50',
-    padding: '8px 16px',
-    borderRadius: '20px',
-    fontWeight: 'bold',
-    fontSize: '14px',
-  },
-  email: {
-    fontSize: '14px',
-    opacity: 0.9,
-  },
-  mainContent: {
-    maxWidth: '1400px',
-    margin: '20px auto',
-    padding: '0 20px',
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '20px',
-    marginBottom: '30px',
-  },
-  statCard: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    borderLeft: '5px solid #ccc',
-  },
-  statNumber: {
-    fontSize: '32px',
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  statLabel: {
-    fontSize: '14px',
-    color: '#666',
-    marginTop: '8px',
-  },
-  filterSection: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '20px',
-    display: 'flex',
-    gap: '10px',
-    alignItems: 'center',
-  },
-  filterLabel: {
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  filterSelect: {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px',
-    cursor: 'pointer',
-  },
-  errorContainer: {
-    backgroundColor: '#ffebee',
-    border: '1px solid #f44336',
-    color: '#c62828',
-    padding: '15px',
-    borderRadius: '4px',
-    marginBottom: '20px',
-  },
-  tableContainer: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    overflowX: 'auto',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  thead: {
-    backgroundColor: '#f5f5f5',
-    borderBottom: '2px solid #ddd',
-  },
-  th: {
-    padding: '15px',
-    textAlign: 'left',
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    fontSize: '14px',
-  },
-  tr: {
-    borderBottom: '1px solid #eee',
-  },
-  td: {
-    padding: '15px',
-    fontSize: '14px',
-    color: '#333',
-  },
-  statusBadge: {
-    display: 'inline-block',
-  },
-  actionButtons: {
-    display: 'flex',
-    gap: '8px',
-  },
-  actionBtn: {
-    padding: '6px 12px',
-    border: 'none',
-    borderRadius: '4px',
-    color: 'white',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    fontSize: '16px',
-    transition: 'all 0.3s ease',
-  },
-  loadingContainer: {
-    maxWidth: '1400px',
-    margin: '40px auto',
-    padding: '20px',
-    textAlign: 'center',
-    backgroundColor: 'white',
-    borderRadius: '8px',
-  },
-  emptyState: {
-    backgroundColor: 'white',
-    padding: '40px',
-    borderRadius: '8px',
-    textAlign: 'center',
-    color: '#666',
-  }
-};

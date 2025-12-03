@@ -73,3 +73,71 @@
   "userId": "6916d92a672652878729cd5a"
 }
 
+[2025-12-03T12:59:07.775Z] [BOOKING] CREATE BOOKING REQUEST
+{
+  "userId": "6916d92a672652878729cd5a",
+  "roomId": "692ddad18b35b77d3c564e98",
+  "startDate": "2025-12-04",
+  "endDate": "2025-12-04",
+  "startTime": "08:00",
+  "endTime": "10:00",
+  "purpose": "gc echA",
+  "participantCount": 12,
+  "kelas": "2023-2"
+}
+
+[2025-12-03T12:59:07.826Z] [INFO] Room found
+{
+  "roomId": "692ddad18b35b77d3c564e98",
+  "roomName": "Area L. Basket Kantek",
+  "capacity": 100
+}
+
+[2025-12-03T12:59:07.871Z] [INFO] Creating booking with data
+{
+  "room": "692ddad18b35b77d3c564e98",
+  "startDate": "2025-12-04T00:00:00.000Z",
+  "endDate": "2025-12-04T00:00:00.000Z",
+  "startTime": "08:00",
+  "endTime": "10:00",
+  "purpose": "gc echA",
+  "description": "ddd",
+  "participantCount": 12,
+  "kelas": "2023-2"
+}
+
+[2025-12-03T12:59:07.884Z] [INFO] [BookingRepo] Saving booking
+{
+  "user": "6916d92a672652878729cd5a",
+  "room": "692ddad18b35b77d3c564e98",
+  "startDate": "2025-12-04T00:00:00.000Z",
+  "endDate": "2025-12-04T00:00:00.000Z",
+  "startTime": "08:00",
+  "endTime": "10:00",
+  "purpose": "gc echA",
+  "description": "ddd",
+  "participantCount": 12,
+  "kelas": "2023-2"
+}
+
+[2025-12-03T12:59:07.937Z] [INFO] [BookingRepo] Booking saved with ID
+{
+  "bookingId": "6930341bae4ac24c9f3565ef"
+}
+
+[2025-12-03T12:59:08.004Z] [INFO] [BookingRepo] Booking populated successfully
+{
+  "bookingId": "6930341bae4ac24c9f3565ef"
+}
+
+[2025-12-03T12:59:08.004Z] [BOOKING] BOOKING CREATED SUCCESSFULLY
+{
+  "bookingId": "6930341bae4ac24c9f3565ef",
+  "userId": "6916d92a672652878729cd5a",
+  "roomId": "692ddad18b35b77d3c564e98",
+  "roomName": "Area L. Basket Kantek",
+  "startDate": "2025-12-04T00:00:00.000Z",
+  "endDate": "2025-12-04T00:00:00.000Z",
+  "status": "pending"
+}
+

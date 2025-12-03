@@ -199,10 +199,9 @@ export default function BookingList() {
 
 const styles = {
   container: {
-    backgroundColor: 'white',
+    backgroundColor: 'transparent',
     padding: '20px',
     borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
   },
   filterSection: {
     display: 'flex',
@@ -210,37 +209,44 @@ const styles = {
     alignItems: 'center',
     marginBottom: '20px',
     paddingBottom: '15px',
-    borderBottom: '1px solid #eee'
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
   },
   filterLabel: {
     fontWeight: 'bold',
-    fontSize: '14px'
+    fontSize: '14px',
+    color: '#cfd6e4'
   },
   filterSelect: {
     padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    border: '1px solid rgba(110, 231, 249, 0.2)',
+    borderRadius: '8px',
     fontSize: '14px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    color: '#cfd6e4',
+    fontFamily: 'inherit'
   },
   refreshBtn: {
     padding: '8px 12px',
-    backgroundColor: '#1976D2',
-    color: 'white',
+    backgroundColor: 'linear-gradient(135deg, #6ee7f9, #8b5cf6)',
+    color: '#0b0f1f',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '14px'
+    fontSize: '14px',
+    fontWeight: 600,
+    boxShadow: '0 6px 16px -4px rgba(139, 92, 246, 0.4)'
   },
   bookingsList: {
     display: 'grid',
     gap: '15px'
   },
   bookingCard: {
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    padding: '15px',
-    backgroundColor: '#f9f9f9',
+    border: '1px solid rgba(110, 231, 249, 0.15)',
+    borderRadius: '16px',
+    padding: '20px',
+    backgroundColor: 'linear-gradient(170deg, rgba(110, 231, 249, 0.05), rgba(139, 92, 246, 0.05))',
+    backdropFilter: 'blur(10px)',
     transition: 'all 0.3s ease'
   },
   cardHeader: {
@@ -248,27 +254,29 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '15px',
-    borderBottom: '1px solid #eee',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
     paddingBottom: '10px'
   },
   cardTitle: {
-    margin: 0
+    margin: 0,
+    color: '#fff'
   },
   purpose: {
     margin: '5px 0 0 0',
     fontSize: '12px',
-    color: '#666'
+    color: '#b4bccf'
   },
   statusBadge: {
     padding: '6px 12px',
     borderRadius: '12px',
     color: 'white',
     fontSize: '12px',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
   },
   cardBody: {
     fontSize: '14px',
-    color: '#666',
+    color: '#cfd6e4',
     marginBottom: '15px'
   },
   bookingInfo: {
@@ -280,21 +288,27 @@ const styles = {
   infoItem: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '3px'
+    gap: '3px',
+    color: '#cfd6e4',
+    fontSize: '13px'
   },
   description: {
-    padding: '8px',
-    backgroundColor: '#f0f0f0',
-    borderRadius: '3px',
+    padding: '12px',
+    backgroundColor: 'rgba(110, 231, 249, 0.08)',
+    borderRadius: '8px',
     marginTop: '10px',
-    fontSize: '13px'
+    fontSize: '13px',
+    color: '#b4bccf',
+    border: '1px solid rgba(110, 231, 249, 0.1)'
   },
   notes: {
-    padding: '8px',
-    backgroundColor: '#fff3cd',
-    borderRadius: '3px',
+    padding: '12px',
+    backgroundColor: 'rgba(255, 193, 7, 0.08)',
+    borderRadius: '8px',
     marginTop: '10px',
-    fontSize: '13px'
+    fontSize: '13px',
+    color: '#ffd700',
+    border: '1px solid rgba(255, 193, 7, 0.2)'
   },
   cardActions: {
     display: 'flex',
@@ -303,41 +317,44 @@ const styles = {
   },
   deleteBtn: {
     padding: '6px 12px',
-    backgroundColor: '#f44336',
-    color: 'white',
+    backgroundColor: 'rgba(244, 67, 54, 0.8)',
+    color: '#fff',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '13px'
+    fontSize: '13px',
+    fontWeight: 600,
+    boxShadow: '0 4px 12px rgba(244, 67, 54, 0.3)'
   },
   loadingState: {
     textAlign: 'center',
     padding: '40px 20px',
-    color: '#666',
+    color: '#97a2b8',
     fontSize: '14px'
   },
   errorState: {
-    backgroundColor: '#ffebee',
-    border: '1px solid #ef5350',
-    color: '#c62828',
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    border: '1px solid rgba(244, 67, 54, 0.4)',
+    color: '#ff7675',
     padding: '15px',
-    borderRadius: '4px',
+    borderRadius: '8px',
     textAlign: 'center'
   },
   retryBtn: {
     marginTop: '10px',
     padding: '8px 16px',
-    backgroundColor: '#c62828',
-    color: 'white',
+    backgroundColor: 'rgba(244, 67, 54, 0.8)',
+    color: '#fff',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '14px'
+    fontSize: '14px',
+    fontWeight: 600
   },
   emptyState: {
     textAlign: 'center',
     padding: '40px 20px',
-    color: '#999',
+    color: '#97a2b8',
     fontSize: '14px'
   }
 };
