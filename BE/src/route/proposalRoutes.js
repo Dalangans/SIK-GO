@@ -1,6 +1,6 @@
 const express = require('express');
 const proposalController = require('../controller/proposalController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const fs = require('fs');
 
 const router = express.Router();
@@ -14,6 +14,10 @@ if (!fs.existsSync(uploadDir)) {
 
 // ===== Routes TANPA parameter ID =====
 router.post('/', protect, upload.single('file'), proposalController.createProposal);
+
+// Admin: Get all proposals with user info (HARUS SEBELUM route :id lainnya)
+router.get('/admin/all', protect, authorize('admin'), proposalController.getAllProposalsForAdmin);
+
 router.get('/', protect, proposalController.getAllProposals);
 router.get('/my-proposals', protect, proposalController.getMyProposals);
 router.get('/review/pending', protect, proposalController.getProposalsNeedingReview);
@@ -33,5 +37,8 @@ router.delete('/:id', protect, proposalController.deleteProposal);
 router.put('/:id/submit', protect, proposalController.submitProposal);
 router.post('/:id/ai-review', protect, proposalController.generateAIReview);
 router.post('/:id/manual-review', protect, proposalController.manualReview);
+
+// Admin: Update proposal status
+router.put('/:id/status', protect, authorize('admin'), proposalController.updateProposalStatus);
 
 module.exports = router;

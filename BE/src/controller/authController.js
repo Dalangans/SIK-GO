@@ -4,8 +4,12 @@ const mongoose = require('mongoose');
 // Register user
 exports.register = async (req, res) => {
   try {
+    // Cek koneksi database dengan timeout
     if (mongoose.connection.readyState === 0) {
-      return res.status(503).json({ success: false, error: 'Database unavailable. Retry later.' });
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Database unavailable. Pastikan MongoDB_URI benar di .env. Retry later.' 
+      });
     }
     if (mongoose.connection.readyState === 2) {
       await mongoose.connection.asPromise(); // tunggu selesai connect
@@ -15,7 +19,16 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, error: 'name, email, password required' });
     }
 
-    const userData = { name, email, password, role };
+    // Validasi role (hanya allow: student, admin, ai_checker)
+    let userRole = role || 'student'; // Default ke 'student' jika tidak disupply
+    if (role && !['student', 'admin', 'ai_checker'].includes(role)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Role tidak valid. Gunakan: student, admin, atau ai_checker' 
+      });
+    }
+
+    const userData = { name, email, password, role: userRole };
     const user = await userRepository.createUser(userData);
     sendTokenResponse(user, 201, res);
   } catch (error) {

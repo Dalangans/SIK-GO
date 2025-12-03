@@ -12,14 +12,19 @@ const SIK_DocumentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  // Lokasi penyimpanan file di server (penting!)
-  filePath: {
-    type: String,
+  // File binary disimpan langsung ke database (BUKAN lokasi path)
+  fileData: {
+    type: Buffer,
     required: true
   },
   // Tipe file (pdf, docx, dll)
   mimeType: {
-    type: String
+    type: String,
+    required: true
+  },
+  // Ukuran file dalam bytes
+  fileSize: {
+    type: Number
   },
   status: {
     type: String,

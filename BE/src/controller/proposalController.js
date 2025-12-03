@@ -97,6 +97,30 @@ exports.getAllProposals = async (req, res) => {
   }
 };
 
+// Admin endpoint: Get all proposals with user info
+exports.getAllProposalsForAdmin = async (req, res) => {
+  try {
+    // Verify user is admin
+    if (req.user.role !== 'admin') {
+      return errorResponse(res, 'Only admins can access this endpoint', 403);
+    }
+
+    const { status } = req.query;
+    const filter = status ? { status } : {};
+
+    // Query dengan populate user untuk mendapatkan info user
+    const Proposal = require('../database/models/Proposal');
+    const proposals = await Proposal.find(filter)
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 });
+
+    successResponse(res, proposals, 'All proposals retrieved successfully');
+  } catch (error) {
+    console.error('Error getting proposals for admin:', error);
+    errorResponse(res, error.message, 500);
+  }
+};
+
 exports.getMyProposals = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -271,6 +295,40 @@ exports.deleteProposal = async (req, res) => {
     successResponse(res, null, 'Proposal deleted successfully');
   } catch (error) {
     console.error('Error deleting proposal:', error);
+    errorResponse(res, error.message, 500);
+  }
+};
+
+// Admin endpoint: Update proposal status
+exports.updateProposalStatus = async (req, res) => {
+  try {
+    // Verify user is admin
+    if (req.user.role !== 'admin') {
+      return errorResponse(res, 'Only admins can update proposal status', 403);
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validasi status
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return errorResponse(res, 'Invalid status. Use: pending, approved, or rejected', 400);
+    }
+
+    const Proposal = require('../database/models/Proposal');
+    const proposal = await Proposal.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    ).populate('user', 'name email');
+
+    if (!proposal) {
+      return errorResponse(res, 'Proposal not found', 404);
+    }
+
+    successResponse(res, proposal, 'Proposal status updated successfully');
+  } catch (error) {
+    console.error('Error updating proposal status:', error);
     errorResponse(res, error.message, 500);
   }
 };

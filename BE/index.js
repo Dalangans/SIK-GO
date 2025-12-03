@@ -74,7 +74,7 @@ const startServer = () => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
-app.use('/api/documents', sikDocumentRoutes);
+app.use('/api/sik-document', sikDocumentRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/proposals-evaluation', proposalEvaluationRoutes);
 app.use('/api/bookings', bookingRoutes);

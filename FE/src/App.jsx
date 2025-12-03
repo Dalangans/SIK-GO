@@ -8,6 +8,7 @@ import ReserveRoom from './pages/ReserveRoom';
 import Bookings from './pages/Bookings';
 import Proposals from './pages/Proposals';
 import DocumentAnalysis from './pages/DocumentAnalysis';
+import AdminDashboard from './pages/AdminDashboard';
 
 // Placeholder sederhana (bisa pindah ke file baru nanti)
 const About = () => <div style={{padding:40}}>About Us Page (coming soon)</div>;
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/proposals" element={<Proposals />} />
         <Route path="/document-analysis" element={<DocumentAnalysis />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/about" element={<About />} />
       </Routes>
     </BrowserRouter>

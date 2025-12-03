@@ -61,7 +61,13 @@ export default function Login() {
         role: json.user.role,
         fullName: json.user.name
       }));
-      navigate('/');
+      
+      // Redirect berdasarkan role
+      if (json.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch {
       setErrors((prev) => ({ ...prev, password: 'Network error. Try again.' }));
     } finally {
