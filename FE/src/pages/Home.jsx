@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { proposalEvaluationAPI } from '../services/api';
+import ProposalSubmitModal from '../components/ProposalSubmitModal';
 
 export default function Home() {
   // Evaluator states
@@ -10,6 +11,9 @@ export default function Home() {
   const [evalSummary, setEvalSummary] = useState(null);
   const [evalResult, setEvalResult] = useState(null);
   const [evalError, setEvalError] = useState('');
+  
+  // Proposal submission modal state
+  const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
   
   // User & auth states
   const [user, setUser] = useState(null);
@@ -68,6 +72,12 @@ export default function Home() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('sikgo_user');
     navigate('/login', { replace: true });
+  };
+
+  const handleProposalSuccess = (proposal) => {
+    // Handle successful proposal submission
+    console.log('Proposal submitted successfully:', proposal);
+    // You can add additional logic here like showing a notification
   };
 
   // Evaluator handlers
@@ -194,6 +204,14 @@ export default function Home() {
           )}
         </h1>
         <p>A platform to manage room reservations and FT UI information seamlessly.</p>
+        {user && (
+          <button 
+            className="hero-submit-btn"
+            onClick={() => setIsProposalModalOpen(true)}
+          >
+            ✓ Submit Your Proposal
+          </button>
+        )}
       </header>
 
       {/* Proposal Evaluator Section */}
@@ -542,6 +560,13 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Proposal Submit Modal */}
+      <ProposalSubmitModal 
+        isOpen={isProposalModalOpen}
+        onClose={() => setIsProposalModalOpen(false)}
+        onSuccess={handleProposalSuccess}
+      />
+
       <style>{`
         :root {
           --grad-main: radial-gradient(1100px 720px at 15% 18%, #1c2344 0%, rgba(28,35,68,.75) 40%, rgba(11,15,31,.95) 68%, #06070f 100%);
@@ -648,6 +673,16 @@ export default function Home() {
           background:linear-gradient(90deg,#fff,#b5c6ff); -webkit-background-clip:text; color:transparent;
         }
         .hero p { margin:0; font-size:17px; color:#b4bccf; line-height:1.5; }
+        .hero-submit-btn {
+          margin-top:12px; padding:12px 28px; border-radius:999px;
+          background:linear-gradient(135deg,#10b981,#06b6d4); color:white; border:none;
+          font-weight:600; font-size:15px; letter-spacing:.3px; cursor:pointer;
+          box-shadow:0 8px 24px -6px rgba(16,185,129,.4); transition:all .3s;
+        }
+        .hero-submit-btn:hover {
+          transform:translateY(-2px); box-shadow:0 12px 32px -6px rgba(16,185,129,.5); filter:brightness(1.05);
+        }
+        .hero-submit-btn:active { transform:translateY(0); }
 
         /* Proposal Evaluator */
         .about-us { padding:10px 34px 40px; margin:120px auto 110px; }
