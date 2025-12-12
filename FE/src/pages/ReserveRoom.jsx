@@ -14,6 +14,8 @@ export default function ReserveRoom() {
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [selectMode, setSelectMode] = useState(location.state?.selectMode || false);
+  const [hasApprovedProposal, setHasApprovedProposal] = useState(null);
+  const [checkingProposal, setCheckingProposal] = useState(true);
 
   const [formData, setFormData] = useState({
     startDate: '',
@@ -26,7 +28,7 @@ export default function ReserveRoom() {
     participantCount: '1'
   });
 
-  // Load user data
+  // Load user data & check for approved proposal
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -37,7 +39,34 @@ export default function ReserveRoom() {
     if (userData) {
       setUser(JSON.parse(userData));
     }
+    
+    // Check if user has approved proposal
+    checkApprovedProposal();
   }, [navigate]);
+
+  const checkApprovedProposal = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const envBase = import.meta.env.VITE_API_URL?.trim();
+      const base = (envBase && envBase !== '') ? envBase.replace(/\/+$/,'') : 'http://localhost:3000';
+      
+      const res = await fetch(`${base}/api/proposals/user/approved`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.success && data.data) {
+        setHasApprovedProposal(true);
+      } else {
+        setHasApprovedProposal(false);
+      }
+    } catch (err) {
+      console.error('Error checking approved proposal:', err);
+      setHasApprovedProposal(false);
+    } finally {
+      setCheckingProposal(false);
+    }
+  };
 
   // Animation trigger
   useEffect(() => {
@@ -213,7 +242,60 @@ export default function ReserveRoom() {
 
       <section className="reserve-container">
         <div className="reserve-wrapper">
-          <form onSubmit={handleSubmit} className="reserve-form">
+          {checkingProposal && (
+            <div style={{textAlign: 'center', padding: '20px', color: '#e6e9f5'}}>
+              Checking your proposal status...
+            </div>
+          )}
+          
+          {!checkingProposal && !hasApprovedProposal && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '30px',
+              color: '#fca5a5'
+            }}>
+              <p style={{margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 600}}>
+                ⚠️ You need an approved proposal to book a room
+              </p>
+              <p style={{margin: '0 0 15px 0', fontSize: '0.9rem'}}>
+                Please create and get an approved proposal first before booking a room.
+              </p>
+              <button 
+                type="button"
+                onClick={() => navigate('/proposals')}
+                style={{
+                  background: 'linear-gradient(90deg, #ef4444, #f87171)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.9rem'
+                }}
+              >
+                Go to Proposals
+              </button>
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit} className="reserve-form" disabled={!hasApprovedProposal}>
+            {/* Disabled overlay if no approved proposal */}
+            {!checkingProposal && !hasApprovedProposal && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '8px',
+                pointerEvents: 'none'
+              }}/>
+            )}
             {/* Room Selection */}
             <div className="form-section">
               <h2 className="section-title">1. Select Room</h2>
@@ -404,8 +486,9 @@ export default function ReserveRoom() {
               <div className="form-actions">
                 <button
                   type="submit"
-                  disabled={submitLoading || loading}
+                  disabled={submitLoading || loading || !hasApprovedProposal || checkingProposal}
                   className="submit-btn"
+                  title={!hasApprovedProposal ? 'You need an approved proposal to book' : ''}
                 >
                   {submitLoading ? '⏳ Saving...' : '💾 Save Reservation'}
                 </button>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { proposalEvaluationAPI } from '../services/api';
 import ProposalSubmitModal from '../components/ProposalSubmitModal';
+import ProposalStatusCard from '../components/ProposalStatusCard';
 
 export default function Home() {
   // Evaluator states
@@ -213,6 +214,9 @@ export default function Home() {
           </button>
         )}
       </header>
+
+      {/* User Proposals Status Section */}
+      {user && <ProposalStatusCard />}
 
       {/* Proposal Evaluator Section */}
       <section className="proposal-evaluator">

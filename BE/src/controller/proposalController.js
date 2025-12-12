@@ -323,9 +323,9 @@ exports.updateProposalStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Validasi status
-    if (!['pending', 'approved', 'rejected'].includes(status)) {
-      return errorResponse(res, 'Invalid status. Use: pending, approved, or rejected', 400);
+    // Validasi status - sesuai dengan enum di model
+    if (!['draft', 'submitted', 'reviewing', 'approved', 'rejected'].includes(status)) {
+      return errorResponse(res, 'Invalid status. Use: draft, submitted, reviewing, approved, or rejected', 400);
     }
 
     const Proposal = require('../database/models/Proposal');
@@ -531,11 +531,12 @@ exports.auditProposal = async (req, res) => {
 exports.getUserApprovedProposal = async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
+    const Proposal = require('../database/models/Proposal');
     
-    const proposal = await proposalRepo.findOne({
+    const proposal = await Proposal.findOne({
       user: userId,
       status: 'approved'
-    });
+    }).populate('user', 'name email');
 
     if (proposal) {
       successResponse(res, proposal, 'User has approved proposal');
