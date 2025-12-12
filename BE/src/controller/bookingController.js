@@ -13,7 +13,7 @@ const roomRepo = new RoomRepository();
 exports.createBooking = async (req, res) => {
   try {
     const { roomId, startDate, endDate, startTime, endTime, purpose, description, participantCount, proposalId, kelas } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id || req.user.id;
 
     logger.booking('CREATE BOOKING REQUEST', {
       userId,
@@ -127,7 +127,7 @@ exports.getAllBookings = async (req, res) => {
 // @access  Private
 exports.getMyBookings = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id || req.user.id;
     const bookings = await bookingRepo.getBookingsByUser(userId);
     successResponse(res, bookings, 'Your bookings retrieved successfully');
   } catch (error) {
@@ -148,7 +148,8 @@ exports.getBookingById = async (req, res) => {
     }
 
     // Check authorization
-    if (booking.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+    const userId = (req.user._id || req.user.id).toString();
+    if (booking.user._id.toString() !== userId && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized to view this booking', 403);
     }
 
@@ -171,7 +172,8 @@ exports.updateBooking = async (req, res) => {
     }
 
     // Check authorization
-    if (booking.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+    const userId = (req.user._id || req.user.id).toString();
+    if (booking.user._id.toString() !== userId && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized to update this booking', 403);
     }
 
@@ -215,7 +217,7 @@ exports.updateBooking = async (req, res) => {
 exports.approveBooking = async (req, res) => {
   try {
     const { notes } = req.body;
-    const approverId = req.user.id;
+    const approverId = req.user._id || req.user.id;
 
     let booking = await bookingRepo.getBookingById(req.params.id);
 
@@ -241,7 +243,7 @@ exports.approveBooking = async (req, res) => {
 exports.rejectBooking = async (req, res) => {
   try {
     const { notes } = req.body;
-    const approverId = req.user.id;
+    const approverId = req.user._id || req.user.id;
 
     let booking = await bookingRepo.getBookingById(req.params.id);
 
@@ -272,7 +274,8 @@ exports.deleteBooking = async (req, res) => {
       return errorResponse(res, 'Booking not found', 404);
     }
 
-    if (booking.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+    const userId = (req.user._id || req.user.id).toString();
+    if (booking.user._id.toString() !== userId && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized', 403);
     }
 

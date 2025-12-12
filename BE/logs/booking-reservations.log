@@ -141,3 +141,79 @@
   "status": "pending"
 }
 
+[2025-12-05T05:52:55.641Z] [BOOKING] CREATE BOOKING REQUEST
+{
+  "userId": "6916d92a672652878729cd5a",
+  "roomId": "692ddad18b35b77d3c564e64",
+  "startTime": "10:00",
+  "endTime": "12:00",
+  "purpose": "Team meeting"
+}
+
+[2025-12-05T05:52:55.644Z] [WARN] Missing required fields in booking request
+{
+  "roomId": true,
+  "startDate": false,
+  "endDate": false,
+  "startTime": true,
+  "endTime": true,
+  "purpose": true,
+  "participantCount": false
+}
+
+[2025-12-05T05:53:49.458Z] [BOOKING] CREATE BOOKING REQUEST
+{
+  "userId": "6916d92a672652878729cd5a",
+  "roomId": "692ddad18b35b77d3c564e64",
+  "startDate": "2025-12-20",
+  "endDate": "2025-12-20",
+  "startTime": "10:00",
+  "endTime": "12:00",
+  "purpose": "Team meeting"
+}
+
+[2025-12-05T05:53:49.462Z] [WARN] Missing required fields in booking request
+{
+  "roomId": true,
+  "startDate": true,
+  "endDate": true,
+  "startTime": true,
+  "endTime": true,
+  "purpose": true,
+  "participantCount": false
+}
+
+[2025-12-05T05:54:46.160Z] [BOOKING] CREATE BOOKING REQUEST
+{
+  "userId": "6916d92a672652878729cd5a",
+  "roomId": "692ddad18b35b77d3c564e64",
+  "startDate": "2025-12-20",
+  "endDate": "2025-12-20",
+  "startTime": "10:00",
+  "endTime": "12:00",
+  "purpose": "Team meeting",
+  "participantCount": 40
+}
+
+[2025-12-05T05:54:46.190Z] [WARN] User has no approved proposal
+{
+  "userId": "6916d92a672652878729cd5a"
+}
+
+[2025-12-05T05:55:35.599Z] [BOOKING] CREATE BOOKING REQUEST
+{
+  "userId": "692fbefb8ffc805229629954",
+  "roomId": "692ddad18b35b77d3c564e64",
+  "startDate": "2025-12-20",
+  "endDate": "2025-12-20",
+  "startTime": "10:00",
+  "endTime": "12:00",
+  "purpose": "Team meeting",
+  "participantCount": 40
+}
+
+[2025-12-05T05:55:35.626Z] [WARN] User has no approved proposal
+{
+  "userId": "692fbefb8ffc805229629954"
+}
+

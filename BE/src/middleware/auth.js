@@ -9,13 +9,20 @@ exports.protect = async (req, res, next) => {
     token = req.headers.authorization.split(' ')[1];
   }
 
-  // 2. DEVELOPMENT MODE: Jika tidak ada token dan mode development
+  console.log('Auth Middleware - Token exists:', !!token);
+  console.log('Auth Middleware - MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
+  console.log('Auth Middleware - NODE_ENV:', process.env.NODE_ENV);
+
+  // 2. Check if token is missing
   if (!token) {
-    // Check if in development/offline mode
-    if (process.env.MONGODB_URI === 'skip' || process.env.NODE_ENV === 'development') {
-      // Create mock user for development
+    // Only use development mode if MONGODB_URI is explicitly 'skip' (for offline testing)
+    // Don't use it just because NODE_ENV is 'development'
+    if (process.env.MONGODB_URI === 'skip') {
+      console.log('Using development mode mock user (MONGODB_URI=skip)');
+      const mongoose = require('mongoose');
+      // Create mock user for development with valid ObjectId
       req.user = {
-        _id: 'dev-user-123',
+        _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'), // Valid ObjectId for testing
         email: 'dev@example.com',
         name: 'Development User',
         role: 'admin',
@@ -23,6 +30,7 @@ exports.protect = async (req, res, next) => {
       };
       return next();
     }
+    console.log('No token provided and not in offline mode - returning 401');
     return res.status(401).json({ 
         success: false, 
         message: 'Not authorized to access this route - No token provided' 
@@ -31,7 +39,9 @@ exports.protect = async (req, res, next) => {
 
   try {
     // 3. Verifikasi token
+    console.log('Verifying token...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded, user ID:', decoded.id);
 
     // 4. Ambil data user berdasarkan ID di token
     const user = await User.findById(decoded.id).select('-password');
@@ -41,6 +51,8 @@ exports.protect = async (req, res, next) => {
         console.log('User not found in database');
         return res.status(401).json({ success: false, message: 'User not found in database' });
     }
+    
+    console.log('Setting req.user with _id:', user._id);
     req.user = user;
 
     next();

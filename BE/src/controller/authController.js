@@ -71,7 +71,8 @@ exports.login = async (req, res) => {
 // Get current logged in user
 exports.getMe = async (req, res) => {
   try {
-    const user = await userRepository.getUserById(req.user.id);
+    const userId = req.user._id || req.user.id;
+    const user = await userRepository.getUserById(userId);
     res.status(200).json({
       success: true,
       data: user

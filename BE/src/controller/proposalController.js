@@ -56,8 +56,17 @@ const upload = multer({
 
 exports.createProposal = async (req, res) => {
   try {
+    console.log('Create Proposal - req.user:', req.user);
     const { title, category, description, content } = req.body;
-    const userId = req.user.id;
+    // Use _id which is guaranteed to exist, fallback to id
+    const userId = req.user._id || req.user.id;
+
+    console.log('Extracted userId:', userId, 'Type:', typeof userId);
+
+    if (!userId) {
+      console.error('No userId found in req.user');
+      return errorResponse(res, 'User authentication failed', 401);
+    }
 
     if (!title || !category || !description || !content) {
       return errorResponse(res, 'Please provide all required fields', 400);
@@ -123,7 +132,7 @@ exports.getAllProposalsForAdmin = async (req, res) => {
 
 exports.getMyProposals = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id || req.user.id;
     const proposals = await proposalRepo.getProposalsByUser(userId);
     successResponse(res, proposals, 'Your proposals retrieved successfully');
   } catch (error) {
@@ -140,7 +149,8 @@ exports.getProposalById = async (req, res) => {
       return errorResponse(res, 'Proposal not found', 404);
     }
 
-    if (proposal.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+    const userId = (req.user._id || req.user.id).toString();
+    if (proposal.user._id.toString() !== userId && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized to view this proposal', 403);
     }
 
@@ -159,7 +169,8 @@ exports.updateProposal = async (req, res) => {
       return errorResponse(res, 'Proposal not found', 404);
     }
 
-    if (proposal.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+    const userId = (req.user._id || req.user.id).toString();
+    if (proposal.user._id.toString() !== userId && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized to update this proposal', 403);
     }
 
@@ -200,7 +211,8 @@ exports.submitProposal = async (req, res) => {
       return errorResponse(res, 'Proposal not found', 404);
     }
 
-    if (proposal.user._id.toString() !== req.user.id) {
+    const userId = (req.user._id || req.user.id).toString();
+    if (proposal.user._id.toString() !== userId) {
       return errorResponse(res, 'Not authorized', 403);
     }
 
@@ -245,7 +257,7 @@ exports.generateAIReview = async (req, res) => {
 exports.manualReview = async (req, res) => {
   try {
     const { comments, status } = req.body;
-    const reviewerId = req.user.id;
+    const reviewerId = req.user._id || req.user.id;
 
     if (!comments || !status) {
       return errorResponse(res, 'Please provide comments and status', 400);
@@ -281,7 +293,8 @@ exports.deleteProposal = async (req, res) => {
       return errorResponse(res, 'Proposal not found', 404);
     }
 
-    if (proposal.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+    const userId = (req.user._id || req.user.id).toString();
+    if (proposal.user._id.toString() !== userId && req.user.role !== 'admin') {
       return errorResponse(res, 'Not authorized', 403);
     }
 

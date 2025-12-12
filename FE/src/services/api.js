@@ -6,24 +6,34 @@ const getToken = () => localStorage.getItem('authToken') || localStorage.getItem
 
 // Helper function untuk API requests
 const apiRequest = async (endpoint, method = 'GET', data = null, isFormData = false) => {
-  const headers = {
-    'Content-Type': isFormData ? 'multipart/form-data' : 'application/json',
-  };
-
   const token = getToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
+  
   const options = {
     method,
-    headers: isFormData ? {} : headers, // FormData akan set headers otomatis
   };
 
-  if (data) {
-    if (isFormData) {
-      options.body = data;
-    } else {
+  if (isFormData) {
+    // For FormData, don't set Content-Type (browser will set it automatically with boundary)
+    // But DO set Authorization header if token exists
+    if (token) {
+      options.headers = {
+        'Authorization': `Bearer ${token}`
+      };
+    }
+    options.body = data;
+  } else {
+    // For JSON requests
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    options.headers = headers;
+    
+    if (data) {
       options.body = JSON.stringify(data);
     }
   }

@@ -29,7 +29,7 @@ exports.createSIKDocument = async (req, res) => {
 
     // 4. Siapkan data untuk disimpan ke Database (file binary disimpan dalam DB)
     const documentData = {
-        user: req.user.id,              // Ambil ID user dari token (middleware protect)
+        user: req.user._id || req.user.id,              // Ambil ID user dari token (middleware protect)
         fileName: req.file.originalname, // Nama asli file
         fileData: req.file.buffer,      // File binary disimpan langsung (dari memoryStorage)
         mimeType: req.file.mimetype,    // Tipe file
@@ -76,7 +76,8 @@ exports.downloadDocument = async (req, res) => {
     }
 
     // Cek apakah user adalah pemilik dokumen atau admin
-    if (document.user.toString() !== req.user.id && req.user.role !== 'admin') {
+    const userId = (req.user._id || req.user.id).toString();
+    if (document.user.toString() !== userId && req.user.role !== 'admin') {
         return res.status(403).json({ 
             success: false, 
             error: 'Anda tidak memiliki akses ke dokumen ini' 
@@ -161,7 +162,8 @@ exports.getAllDocuments = async (req, res) => {
 // List dokumen milik user
 exports.getUserDocuments = async (req, res) => {
   try {
-    const documents = await SIK_Document.find({ user: req.user.id })
+    const userId = req.user._id || req.user.id;
+    const documents = await SIK_Document.find({ user: userId })
         .select('-fileData'); // Jangan include binary data dalam list
 
     res.status(200).json({
