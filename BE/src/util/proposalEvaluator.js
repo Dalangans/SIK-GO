@@ -1,9 +1,109 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Lazy load API key when module is imported
 let genAI = null;
+
+// Cache for evaluation results
+const evaluationCache = new Map();
+const CACHE_DURATION = 3600000; // 1 hour in milliseconds
+
+function generateContentHash(text) {
+  return crypto.createHash('md5').update(text).digest('hex');
+}
+
+function getCachedResult(contentHash) {
+  if (!evaluationCache.has(contentHash)) {
+    return null;
+  }
+  const cached = evaluationCache.get(contentHash);
+  const now = Date.now();
+  if (now - cached.timestamp > CACHE_DURATION) {
+    evaluationCache.delete(contentHash);
+    return null;
+  }
+  console.log('Cache hit for evaluation:', contentHash);
+  return cached.result;
+}
+
+function setCachedResult(contentHash, result) {
+  evaluationCache.set(contentHash, {
+    result,
+    timestamp: Date.now()
+  });
+  console.log('Cached evaluation result:', contentHash);
+}
+
+async function callGeminiWithRetry(requestFn, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      const isRateLimit = error.message.includes('429') || 
+                         error.message.includes('rate limit') || 
+                         error.message.includes('quota');
+      const isLastAttempt = attempt === maxRetries - 1;
+      
+      if (isRateLimit && !isLastAttempt) {
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        console.log(`Rate limit detected. Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+/**
+ * Generate mock/fallback evaluation when API fails
+ * Useful for development without API quota
+ */
+function generateMockEvaluation() {
+  const mockScores = [
+    { parameter: "Struktur Proposal", score: 4, reason: "Struktur jelas dan terorganisir" },
+    { parameter: "Latar Belakang", score: 4, reason: "Latar belakang cukup detail" },
+    { parameter: "Visi & Misi", score: 3, reason: "Visi misi sudah ada namun perlu lebih spesifik" },
+    { parameter: "Tujuan Kegiatan", score: 4, reason: "Tujuan terukur dan jelas" },
+    { parameter: "Nama dan Tema Kegiatan", score: 4, reason: "Nama dan tema menarik" },
+    { parameter: "Informasi Teknis - WAKTU", score: 4, reason: "Waktu sesuai dengan ketentuan" },
+    { parameter: "Informasi Teknis - TEMPAT", score: 3, reason: "Tempat sudah disebutkan namun perlu lebih spesifik" },
+    { parameter: "Informasi Teknis - SASARAN", score: 4, reason: "Sasaran peserta jelas" },
+    { parameter: "Parameter Keberhasilan", score: 3, reason: "Parameter keberhasilan cukup namun perlu metrik yang lebih terukur" },
+    { parameter: "Bentuk Kegiatan", score: 4, reason: "Bentuk kegiatan sesuai dan menarik" },
+    { parameter: "Susunan Acara", score: 4, reason: "Susunan acara runtut dan terstruktur" },
+    { parameter: "Susunan Kepanitiaan", score: 4, reason: "Kepanitiaan terstruktur dengan jelas" },
+    { parameter: "Rancangan Anggaran", score: 3, reason: "Anggaran sudah ada namun perlu detail breakdown" },
+    { parameter: "Penutup", score: 3, reason: "Penutup singkat dan efektif" },
+    { parameter: "Lampiran", score: 3, reason: "Lampiran lengkap" }
+  ];
+
+  const totalScore = mockScores.reduce((sum, item) => sum + item.score, 0);
+  
+  return {
+    scores: mockScores,
+    strengths: [
+      "Struktur dan organisasi proposal baik",
+      "Tujuan kegiatan jelas dan terukur",
+      "Jadwal dan tempat sudah ditetapkan",
+      "Susunan kepanitiaan lengkap",
+      "Rancangan anggaran sudah ada"
+    ],
+    weaknesses: [
+      "Perlu detail lebih spesifik untuk lokasi",
+      "Parameter keberhasilan perlu metrik yang lebih terukur",
+      "Breakdown anggaran perlu lebih detail",
+      "Analisis risiko belum ada",
+      "Timeline persiapan perlu diperjelas"
+    ],
+    recommendation: "TERIMA",
+    total_score: totalScore,
+    notes: "[DEMO MODE] Evaluasi ini dihasilkan tanpa menggunakan Gemini API (quota habis). Gunakan untuk demo/testing saja. Untuk evaluasi produksi, gunakan API key dengan billing aktif.",
+    isDemoMode: true
+  };
+}
 
 function getGenAI() {
   if (!genAI) {
@@ -110,6 +210,14 @@ async function evaluateProposal(filePath, fileName) {
       throw new Error('Proposal is too short or unreadable');
     }
     
+    // Check cache first
+    const contentHash = generateContentHash(text);
+    const cachedResult = getCachedResult(contentHash);
+    if (cachedResult) {
+      console.log('Using cached evaluation result for:', fileName);
+      return cachedResult;
+    }
+    
     const maxLength = 5000;
     const truncatedText = text.length > maxLength 
       ? text.substring(0, maxLength) + '\n\n[... dokumen dipotong ...]' 
@@ -179,15 +287,60 @@ ${truncatedText}
 """`;
 
     const model = getGenAI().getGenerativeModel({ model: getModel() });
-    const result = await model.generateContent({
-      contents: [{ parts: [{ text: evaluationPrompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 3000,
-      },
-    });
+    
+    let apiResult;
+    let usedMockEvaluation = false;
+    
+    try {
+      apiResult = await callGeminiWithRetry(async () => {
+        return await model.generateContent({
+          contents: [{ parts: [{ text: evaluationPrompt }] }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 3000,
+          },
+        });
+      });
+    } catch (apiError) {
+      console.error('Gemini API Error during evaluation:', apiError.message);
+      
+      // Check if it's a quota/rate limit error
+      const isQuotaError = apiError.message.includes('429') || 
+                          apiError.message.includes('quota') || 
+                          apiError.message.includes('rate limit');
+      
+      console.log('isQuotaError detected:', isQuotaError);
+      
+      if (isQuotaError) {
+        console.warn('API quota exceeded. Using mock evaluation for demo purposes.');
+        // Use mock evaluation as fallback
+        const mockResult = generateMockEvaluation();
+        
+        const mockEvaluationResult = {
+          success: true,
+          evaluation: mockResult,
+          filename: fileName,
+          textLength: text.length,
+          isDemoMode: true,
+          message: 'This is a demo evaluation. Please use a valid API key with active billing for production.'
+        };
+        
+        console.log('Returning mock evaluation result');
+        setCachedResult(contentHash, mockEvaluationResult);
+        return mockEvaluationResult;
+      }
+      
+      // For other errors, throw normally
+      if (apiError.message.includes('401') || apiError.message.includes('invalid')) {
+        throw new Error('API key invalid. Please check server configuration.');
+      }
+      if (apiError.message.includes('503') || apiError.message.includes('service')) {
+        throw new Error('AI service temporarily unavailable. Please try again later.');
+      }
+      throw new Error(`Gemini API error: ${apiError.message}`);
+    }
 
-    let responseText = result.response.text().trim();
+    let responseText = apiResult.response.text().trim();
     
     // Remove markdown code blocks
     responseText = responseText.replace(/^```json\s*/i, '');
@@ -256,12 +409,17 @@ ${truncatedText}
       return sum + (parseInt(item.score) || 0);
     }, 0);
 
-    return {
+    const evaluationResult = {
       success: true,
       evaluation,
       filename: fileName,
       textLength: text.length,
     };
+
+    // Cache the evaluation result
+    setCachedResult(contentHash, evaluationResult);
+
+    return evaluationResult;
   } catch (error) {
     throw new Error(`Proposal evaluation failed: ${error.message}`);
   }
