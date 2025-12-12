@@ -47,6 +47,7 @@ export default function Bookings() {
           <a href="/">Home</a>
           <a href="/rooms">Rooms</a>
           <a href="/bookings" className="active">Bookings</a>
+          {user && <a href="/proposals">Proposals</a>}
           {user && (
             <>
               <span className="welcome">Welcome back, {displayName}</span>
@@ -104,8 +105,27 @@ export default function Bookings() {
           padding: 0;
         }
 
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+          width: 10px;
+          background: transparent;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: rgba(110, 231, 249, 0.4);
+          border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(110, 231, 249, 0.6);
+        }
+
         body {
-          background: var(--grad-main);
+          background: radial-gradient(1400px 900px at 10% 10%, #1a1f42 0%, #0f1429 45%, #0b0e1e 70%, #060712 100%);
           font-family: var(--font-stack);
           -webkit-font-smoothing: antialiased;
           color: #e6e9f5;
@@ -127,6 +147,17 @@ export default function Bookings() {
           overflow-y: auto;
           overflow-x: hidden;
           font-family: var(--font-stack);
+          opacity: 0;
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .bookings-root.animated {
+          opacity: 1;
         }
 
         .bookings-root::before,
@@ -193,6 +224,7 @@ export default function Bookings() {
           gap: 24px;
           position: relative;
           z-index: 1;
+          margin-left: auto;
         }
 
         .links a {

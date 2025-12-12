@@ -143,6 +143,38 @@ export default function BookingForm({ onSuccess }) {
   return (
     <div style={styles.container}>
       <form onSubmit={handleSubmit} style={styles.form}>
+        <style>{`
+          input[type="date"],
+          input[type="time"],
+          input[type="text"],
+          input[type="number"],
+          select,
+          textarea {
+            transition: all 0.25s ease;
+          }
+          
+          input[type="date"]:hover,
+          input[type="time"]:hover,
+          input[type="text"]:hover,
+          input[type="number"]:hover,
+          select:hover,
+          textarea:hover {
+            border-color: rgba(110, 231, 249, 0.3);
+            background-color: rgba(255, 255, 255, 0.08);
+          }
+          
+          input[type="date"]:focus,
+          input[type="time"]:focus,
+          input[type="text"]:focus,
+          input[type="number"]:focus,
+          select:focus,
+          textarea:focus {
+            outline: none;
+            border-color: rgba(110, 231, 249, 0.5);
+            background-color: rgba(110, 231, 249, 0.08);
+            box-shadow: 0 0 0 3px rgba(110, 231, 249, 0.1);
+          }
+        `}</style>
         <div style={styles.formGroup}>
           <label style={styles.label}>Room *</label>
           {roomsLoading ? (
@@ -289,63 +321,72 @@ export default function BookingForm({ onSuccess }) {
 
 const styles = {
   container: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    padding: '0'
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '15px'
+    gap: '20px'
   },
   formGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '15px'
+    gap: '16px'
   },
   formGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '5px'
+    gap: '8px'
   },
   label: {
-    fontWeight: 'bold',
-    fontSize: '14px',
-    color: '#333'
+    fontWeight: '600',
+    fontSize: '13px',
+    color: '#e6e9f5',
+    letterSpacing: '0.3px',
+    textTransform: 'uppercase'
   },
   input: {
-    padding: '10px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    padding: '12px 14px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '10px',
     fontSize: '14px',
-    fontFamily: 'Arial, sans-serif',
-    boxSizing: 'border-box'
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    boxSizing: 'border-box',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    color: '#e6e9f5',
+    transition: 'all 0.25s ease',
+    backdropFilter: 'blur(10px)'
   },
   submitBtn: {
-    padding: '10px 20px',
-    backgroundColor: '#1976D2',
-    color: 'white',
+    padding: '12px 28px',
+    background: 'linear-gradient(135deg, #6ee7f9, #8b5cf6)',
+    color: '#0b0f1f',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '10px',
     cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: 'bold'
+    fontSize: '14px',
+    fontWeight: '600',
+    letterSpacing: '0.5px',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 8px 20px -4px rgba(139, 92, 246, 0.4)',
+    marginTop: '12px'
   },
   errorMessage: {
-    backgroundColor: '#ffebee',
-    border: '1px solid #ef5350',
-    color: '#c62828',
-    padding: '10px',
-    borderRadius: '4px',
-    fontSize: '14px'
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
+    color: '#fca5a5',
+    padding: '12px 14px',
+    borderRadius: '10px',
+    fontSize: '13px',
+    borderLeft: '3px solid #ef4444'
   },
   successMessage: {
-    backgroundColor: '#e8f5e9',
-    border: '1px solid #66bb6a',
-    color: '#2e7d32',
-    padding: '10px',
-    borderRadius: '4px',
-    fontSize: '14px'
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    border: '1px solid rgba(16, 185, 129, 0.3)',
+    color: '#6ee7b7',
+    padding: '12px 14px',
+    borderRadius: '10px',
+    fontSize: '13px',
+    borderLeft: '3px solid #10b981'
   }
 };

@@ -103,11 +103,6 @@ export default function ProposalStatusCard() {
   return (
     <section className="proposal-status-section">
       <div className="proposal-status-container">
-        <div className="proposal-status-header">
-          <h2>Your Proposals</h2>
-          <p>Track the status of your submissions</p>
-        </div>
-
         {loading ? (
           <div className="proposal-status-loading">
             <div className="spinner"></div>

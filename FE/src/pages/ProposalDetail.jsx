@@ -7,6 +7,13 @@ export default function ProposalDetail() {
   const [proposal, setProposal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [referrerPage, setReferrerPage] = useState('/proposals');
+
+  useEffect(() => {
+    // Simpan halaman referrer dari location state atau gunakan default
+    const state = window.history.state?.usr || {};
+    setReferrerPage(state.from || '/proposals');
+  }, []);
 
   useEffect(() => {
     fetchProposalDetail();
@@ -139,7 +146,7 @@ export default function ProposalDetail() {
         <div style={styles.header}>
           <button
             style={styles.backBtn}
-            onClick={() => navigate('/proposals')}
+            onClick={() => navigate(referrerPage)}
             onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.12)'}
             onMouseOut={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.08)'}
           >
@@ -298,7 +305,7 @@ export default function ProposalDetail() {
             )}
             <button
               style={styles.closeBtn}
-              onClick={() => navigate('/proposals')}
+              onClick={() => navigate(referrerPage)}
               onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.12)'}
               onMouseOut={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.08)'}
             >

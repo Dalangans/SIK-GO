@@ -105,6 +105,17 @@ export default function Proposals() {
           overflow-y: auto;
           overflow-x: hidden;
           font-family: var(--font-stack);
+          opacity: 0;
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .proposals-root.animated {
+          opacity: 1;
         }
 
         .proposals-root::before,

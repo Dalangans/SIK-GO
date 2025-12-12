@@ -178,6 +178,8 @@ export default function Rooms() {
         <div className="links">
           <Link to="/">Home</Link>
           <Link to="/rooms" className="active">Rooms</Link>
+          {user && <Link to="/bookings">Bookings</Link>}
+          {user && <Link to="/proposals">Proposals</Link>}
           {!user && <Link to="/login" className="login-btn">Log In</Link>}
           {user && (
             <>
@@ -381,15 +383,48 @@ export default function Rooms() {
 
         html,body,#root,.rooms-root { max-width:100vw; overflow-x:hidden; }
         html,body,#root { margin:0; padding:0; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+          width: 10px;
+          background: transparent;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: rgba(110, 231, 249, 0.4);
+          border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(110, 231, 249, 0.6);
+        }
+
         body {
-          background: var(--grad-main), var(--grad-accent-purple), var(--grad-accent-deep), linear-gradient(180deg, rgba(67,27,87,.10), rgba(14,20,38,.10));
+          background: radial-gradient(1400px 900px at 10% 10%, #1a1f42 0%, #0f1429 45%, #0b0e1e 70%, #060712 100%);
           font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue";
           -webkit-font-smoothing: antialiased;
           color:#e6e9f5;
           overscroll-behavior-x:none;
         }
 
-        .rooms-root { padding-top:86px; }
+        .rooms-root { 
+          padding-top:86px;
+          opacity: 0;
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .rooms-root.animated {
+          opacity: 1;
+        }
         .rooms-root::before,
         .rooms-root::after {
           content:""; position:fixed; inset:auto; pointer-events:none; width:520px; height:520px;
@@ -409,7 +444,7 @@ export default function Rooms() {
         .logo { display:flex; align-items:center; gap:12px; }
         .logo-icon { width:36px; height:36px; }
         .logo-text { font-weight:700; font-size:18px; letter-spacing:.5px; background:var(--grad-link); -webkit-background-clip:text; color:transparent; }
-        .links { display:flex; align-items:center; gap:24px; position:relative; z-index:1; }
+        .links { display:flex; align-items:center; gap:24px; position:relative; z-index:1; margin-left:auto; }
         .links a {
           font-size:13.5px; font-weight:600; letter-spacing:.25px;
           color:var(--color-text); text-decoration:none; position:relative; padding:4px 4px;

@@ -9,9 +9,15 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [mounted, setMounted] = useState(false);
   const retryFlag = useRef(false);
   const cardRef = useRef(null);
   const iconRef = useRef(null);
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
 
   const validate = () => {
     setError('');
@@ -107,7 +113,7 @@ export default function Register() {
   }, []);
 
   return (
-    <div className="login-root">
+    <div className={`login-root ${mounted ? 'animated' : ''}`}>
       <div className="aurora a1" />
       <div className="aurora a2" />
       <div className="aurora a3" />
@@ -202,7 +208,9 @@ export default function Register() {
         * { box-sizing: border-box; }
         html, body, #root { height: 100%; }
         body { margin: 0; background: radial-gradient(1200px 800px at 10% 10%, #1a1f42 0%, #0b0e1e 60%, #060712 100%); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue"; }
-        .login-root { min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px; position: relative; overflow: hidden; isolation: isolate; }
+        .login-root { min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px; position: relative; overflow: hidden; isolation: isolate; opacity: 0; animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .login-root.animated { opacity: 1; }
         .aurora { position: absolute; inset: -20%; filter: blur(70px); opacity: .35; z-index: -1; transform: translateZ(0); }
         .a1 { background: radial-gradient(circle at 20% 30%, #6ee7f955, transparent 50%); }
         .a2 { background: radial-gradient(circle at 80% 20%, #8b5cf655, transparent 50%); }

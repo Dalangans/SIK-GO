@@ -10,6 +10,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [registeredSuccess, setRegisteredSuccess] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
 
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
@@ -76,7 +82,7 @@ export default function Login() {
   };
 
   return (
-    <div className="login-root">
+    <div className={`login-root ${mounted ? 'animated' : ''}`}>
       <div className="aurora a1" />
       <div className="aurora a2" />
       <div className="aurora a3" />
@@ -184,6 +190,21 @@ export default function Login() {
           position: relative;
           overflow: hidden;
           isolation: isolate;
+          opacity: 0;
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .login-root.animated {
+          opacity: 1;
         }
         .aurora {
           position: absolute; inset: -20%;
