@@ -12,14 +12,11 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [step, setStep] = useState('form'); // 'form', 'success'
+  const [step, setStep] = useState('form');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleFileChange = (e) => {
@@ -35,9 +32,7 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     e.stopPropagation();
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      setFile(droppedFile);
-    }
+    if (droppedFile) setFile(droppedFile);
   };
 
   const validateForm = () => {
@@ -61,14 +56,10 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
     setError('');
     setSuccess('');
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
-      
-      // Step 1: Create proposal as draft
       const createRes = await proposalAPI.createProposal(formData, file);
       if (!createRes.success) {
         setError(createRes.error || 'Failed to create proposal');
@@ -76,8 +67,6 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
       }
 
       const proposalId = createRes.data._id;
-      
-      // Step 2: Submit the proposal
       const submitRes = await proposalAPI.submitProposal(proposalId);
       if (!submitRes.success) {
         setError(submitRes.error || 'Failed to submit proposal');
@@ -86,20 +75,14 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
 
       setSuccess('Proposal submitted successfully!');
       setStep('success');
-      
-      // Reset form
       setFormData({ title: '', category: '', description: '', content: '' });
       setFile(null);
 
-      // Call onSuccess callback
       if (onSuccess) {
         onSuccess(createRes.data);
       }
 
-      // Auto close after 2 seconds
-      setTimeout(() => {
-        resetAndClose();
-      }, 2000);
+      setTimeout(() => resetAndClose(), 2000);
     } catch (err) {
       setError(err.message || 'Error submitting proposal');
     } finally {
@@ -122,22 +105,22 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
     <div style={styles.modalOverlay} onClick={resetAndClose}>
       <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <div style={styles.modalHeader}>
-          <h2>Submit New Proposal</h2>
+          <h2 style={styles.modalTitle}>Submit New Proposal</h2>
           <button
             style={styles.closeBtn}
             onClick={resetAndClose}
             type="button"
+            onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.12)'}
+            onMouseOut={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.08)'}
           >
-            ✕
+            ×
           </button>
         </div>
 
         {step === 'form' ? (
           <form onSubmit={handleSubmit} style={styles.form}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>
-                Title <span style={{ color: 'red' }}>*</span>
-              </label>
+              <label style={styles.label}>Title</label>
               <input
                 type="text"
                 name="title"
@@ -148,15 +131,10 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
                 disabled={loading}
                 maxLength={200}
               />
-              <small style={styles.hint}>
-                {formData.title.length}/200 characters
-              </small>
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>
-                Category <span style={{ color: 'red' }}>*</span>
-              </label>
+              <label style={styles.label}>Category</label>
               <select
                 name="category"
                 value={formData.category}
@@ -164,37 +142,29 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
                 style={styles.input}
                 disabled={loading}
               >
-                <option value="">-- Select Category --</option>
-                <option value="academic">Academic</option>
-                <option value="event">Event</option>
+                <option value="">Select a category</option>
                 <option value="research">Research</option>
+                <option value="project">Project</option>
+                <option value="event">Event</option>
                 <option value="other">Other</option>
               </select>
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>
-                Description <span style={{ color: 'red' }}>*</span>
-              </label>
+              <label style={styles.label}>Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="Describe your proposal briefly"
+                placeholder="Brief description of your proposal"
                 style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
                 rows={4}
                 disabled={loading}
-                maxLength={1000}
               />
-              <small style={styles.hint}>
-                {formData.description.length}/1000 characters
-              </small>
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>
-                Detailed Content
-              </label>
+              <label style={styles.label}>Additional Details (Optional)</label>
               <textarea
                 name="content"
                 value={formData.content}
@@ -211,8 +181,8 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
               <div
                 style={{
                   ...styles.dropZone,
-                  borderColor: file ? '#4CAF50' : '#ddd',
-                  backgroundColor: file ? '#f1f8f4' : '#fafafa'
+                  borderColor: file ? 'rgba(110, 231, 249, 0.5)' : 'rgba(110, 231, 249, 0.2)',
+                  background: file ? 'rgba(110, 231, 249, 0.08)' : 'rgba(110, 231, 249, 0.05)'
                 }}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
@@ -226,23 +196,23 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
                 />
                 {file ? (
                   <div style={styles.fileInfo}>
-                    <p style={styles.fileIcon}>📄</p>
                     <p style={styles.fileName}>{file.name}</p>
-                    <small>{(file.size / 1024).toFixed(2)} KB</small>
+                    <small style={styles.fileSize}>{(file.size / 1024).toFixed(2)} KB</small>
                     <button
                       type="button"
                       style={styles.removeFileBtn}
                       onClick={() => setFile(null)}
                       disabled={loading}
+                      onMouseOver={(e) => e.target.style.opacity = '0.9'}
+                      onMouseOut={(e) => e.target.style.opacity = '1'}
                     >
                       Remove File
                     </button>
                   </div>
                 ) : (
                   <div style={styles.dropZoneContent}>
-                    <p style={styles.dropZoneIcon}>📤</p>
-                    <p>Drag and drop your file here, or click to browse</p>
-                    <small>Supported: PDF, DOC, DOCX, TXT, MD, XLS, XLSX (Max 10MB)</small>
+                    <p style={styles.dropZoneText}>Drag and drop your file here, or click to browse</p>
+                    <small style={styles.dropZoneHint}>Supported: PDF, DOC, DOCX, TXT, MD, XLS, XLSX</small>
                   </div>
                 )}
               </div>
@@ -250,7 +220,7 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
 
             {error && (
               <div style={styles.errorMessage}>
-                <span style={styles.errorIcon}>⚠️</span> {error}
+                {error}
               </div>
             )}
 
@@ -260,6 +230,8 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
                 style={styles.cancelBtn}
                 onClick={resetAndClose}
                 disabled={loading}
+                onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.12)'}
+                onMouseOut={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.08)'}
               >
                 Cancel
               </button>
@@ -267,6 +239,8 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
                 type="submit"
                 style={styles.submitBtn}
                 disabled={loading}
+                onMouseOver={(e) => !loading && (e.target.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.4)')}
+                onMouseOut={(e) => e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)'}
               >
                 {loading ? 'Submitting...' : 'Submit Proposal'}
               </button>
@@ -274,13 +248,14 @@ export default function ProposalSubmitModal({ isOpen, onClose, onSuccess }) {
           </form>
         ) : (
           <div style={styles.successMessage}>
-            <div style={styles.successIcon}>✓</div>
-            <h3>Success!</h3>
-            <p>Your proposal has been submitted successfully.</p>
-            <p>You can view and manage it in the Proposals section.</p>
+            <h3 style={styles.successTitle}>Success</h3>
+            <p style={styles.successText}>Your proposal has been submitted successfully.</p>
+            <p style={styles.successText}>You can view and manage it in the Proposals section.</p>
             <button
               style={styles.okBtn}
               onClick={resetAndClose}
+              onMouseOver={(e) => e.target.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.4)'}
+              onMouseOut={(e) => e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)'}
             >
               Done
             </button>
@@ -298,21 +273,24 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: '20px'
+    padding: '20px',
+    backdropFilter: 'blur(4px)'
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+    background: 'radial-gradient(1400px 900px at 10% 10%, rgba(26, 31, 66, 0.95) 0%, rgba(15, 20, 41, 0.95) 45%, rgba(11, 14, 30, 0.95) 70%, rgba(6, 7, 18, 0.95) 100%)',
+    border: '1px solid rgba(110, 231, 249, 0.15)',
+    borderRadius: '16px',
+    boxShadow: '0 10px 40px rgba(139, 92, 246, 0.15)',
     maxWidth: '600px',
     width: '100%',
     maxHeight: '90vh',
     overflowY: 'auto',
+    backdropFilter: 'blur(10px)',
     animation: 'slideIn 0.3s ease-out'
   },
   modalHeader: {
@@ -320,26 +298,31 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '24px',
-    borderBottom: '1px solid #eee',
-    backgroundColor: '#f8f9fa'
+    borderBottom: '1px solid rgba(110, 231, 249, 0.1)',
+    background: 'transparent'
+  },
+  modalTitle: {
+    color: '#cfd6e4',
+    margin: 0,
+    fontSize: '20px',
+    fontWeight: '600'
   },
   closeBtn: {
-    background: 'none',
-    border: 'none',
-    fontSize: '24px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    fontSize: '28px',
     cursor: 'pointer',
-    color: '#666',
-    padding: '0',
-    width: '32px',
-    height: '32px',
+    color: '#cfd6e4',
+    padding: '4px 8px',
+    width: '36px',
+    height: '36px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '4px',
+    borderRadius: '8px',
     transition: 'all 0.2s',
-    ':hover': {
-      backgroundColor: '#e0e0e0'
-    }
+    fontWeight: 'bold',
+    lineHeight: '1'
   },
   form: {
     display: 'flex',
@@ -354,31 +337,27 @@ const styles = {
   },
   label: {
     fontWeight: '600',
-    color: '#333',
+    color: '#cfd6e4',
     fontSize: '14px'
   },
   input: {
-    padding: '10px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
+    padding: '12px 14px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(110, 231, 249, 0.2)',
+    borderRadius: '8px',
     fontSize: '14px',
     fontFamily: 'inherit',
-    transition: 'border-color 0.2s',
+    color: '#cfd6e4',
+    transition: 'all 0.2s',
     boxSizing: 'border-box'
   },
-  hint: {
-    fontSize: '12px',
-    color: '#999',
-    marginTop: '4px'
-  },
   dropZone: {
-    border: '2px dashed #ddd',
-    borderRadius: '8px',
+    border: '2px dashed rgba(110, 231, 249, 0.2)',
+    borderRadius: '10px',
     padding: '24px',
     textAlign: 'center',
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    backgroundColor: '#fafafa'
+    transition: 'all 0.2s'
   },
   fileInput: {
     display: 'none'
@@ -387,11 +366,17 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '12px'
+    gap: '8px'
   },
-  dropZoneIcon: {
-    fontSize: '32px',
-    margin: 0
+  dropZoneText: {
+    color: '#cfd6e4',
+    margin: 0,
+    fontSize: '14px',
+    fontWeight: '500'
+  },
+  dropZoneHint: {
+    color: '#97a2b8',
+    fontSize: '12px'
   },
   fileInfo: {
     display: 'flex',
@@ -399,40 +384,35 @@ const styles = {
     alignItems: 'center',
     gap: '8px'
   },
-  fileIcon: {
-    fontSize: '28px',
-    margin: 0
-  },
   fileName: {
     fontWeight: '500',
+    color: '#cfd6e4',
     margin: '8px 0 0 0',
     wordBreak: 'break-all'
   },
+  fileSize: {
+    color: '#97a2b8',
+    fontSize: '12px'
+  },
   removeFileBtn: {
     marginTop: '12px',
-    padding: '6px 12px',
-    backgroundColor: '#ff6b6b',
+    padding: '8px 14px',
+    background: 'linear-gradient(135deg, #ff6b6b, #ff5252)',
     color: 'white',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '12px',
     fontWeight: '600',
-    transition: 'background-color 0.2s'
+    transition: 'all 0.2s'
   },
   errorMessage: {
-    backgroundColor: '#fee',
-    border: '1px solid #fcc',
-    color: '#c33',
-    padding: '12px',
-    borderRadius: '6px',
-    fontSize: '14px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
-  },
-  errorIcon: {
-    fontSize: '16px'
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    border: '1px solid rgba(255, 107, 107, 0.3)',
+    color: '#ff9a9a',
+    padding: '12px 14px',
+    borderRadius: '8px',
+    fontSize: '14px'
   },
   formActions: {
     display: 'flex',
@@ -442,25 +422,26 @@ const styles = {
   },
   cancelBtn: {
     padding: '10px 20px',
-    backgroundColor: '#f0f0f0',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
     transition: 'all 0.2s',
-    color: '#333'
+    color: '#cfd6e4'
   },
   submitBtn: {
     padding: '10px 24px',
-    backgroundColor: '#4CAF50',
-    color: 'white',
+    background: 'linear-gradient(135deg, #6ee7f9, #8b5cf6)',
+    color: '#0b0f1f',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
+    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
   },
   successMessage: {
     display: 'flex',
@@ -471,19 +452,27 @@ const styles = {
     gap: '16px',
     textAlign: 'center'
   },
-  successIcon: {
-    fontSize: '64px',
-    color: '#4CAF50'
+  successTitle: {
+    color: '#6ee7f9',
+    fontSize: '24px',
+    margin: 0,
+    fontWeight: '600'
+  },
+  successText: {
+    color: '#cfd6e4',
+    margin: '8px 0'
   },
   okBtn: {
     padding: '10px 32px',
-    backgroundColor: '#4CAF50',
-    color: 'white',
+    background: 'linear-gradient(135deg, #6ee7f9, #8b5cf6)',
+    color: '#0b0f1f',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    marginTop: '16px'
+    marginTop: '16px',
+    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+    transition: 'all 0.2s'
   }
 };

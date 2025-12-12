@@ -7,6 +7,7 @@ import Rooms from './pages/Rooms';
 import ReserveRoom from './pages/ReserveRoom';
 import Bookings from './pages/Bookings';
 import Proposals from './pages/Proposals';
+import ProposalDetail from './pages/ProposalDetail';
 import DocumentAnalysis from './pages/DocumentAnalysis';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/reserve-room" element={<ReserveRoom />} />
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/proposals" element={<Proposals />} />
+        <Route path="/proposals/:id" element={<ProposalDetail />} />
         <Route path="/document-analysis" element={<DocumentAnalysis />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/about" element={<About />} />

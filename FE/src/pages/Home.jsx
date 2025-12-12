@@ -210,7 +210,7 @@ export default function Home() {
             className="hero-submit-btn"
             onClick={() => setIsProposalModalOpen(true)}
           >
-            ✓ Submit Your Proposal
+            Submit Your Proposal
           </button>
         )}
       </header>

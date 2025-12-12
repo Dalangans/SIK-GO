@@ -104,7 +104,7 @@ export default function ProposalStatusCard() {
     <section className="proposal-status-section">
       <div className="proposal-status-container">
         <div className="proposal-status-header">
-          <h2>📋 Your Proposals</h2>
+          <h2>Your Proposals</h2>
           <p>Track the status of your submissions</p>
         </div>
 
@@ -149,18 +149,18 @@ export default function ProposalStatusCard() {
 
                 <div className="proposal-meta">
                   <span className="meta-item">
-                    📅 Created: {new Date(proposal.createdAt).toLocaleDateString()}
+                    Created: {new Date(proposal.createdAt).toLocaleDateString()}
                   </span>
                   {proposal.updatedAt && (
                     <span className="meta-item">
-                      🔄 Updated: {new Date(proposal.updatedAt).toLocaleDateString()}
+                      Updated: {new Date(proposal.updatedAt).toLocaleDateString()}
                     </span>
                   )}
                 </div>
 
                 {proposal.manualReview && (
                   <div className="proposal-manual-review">
-                    <p className="review-label">📝 Reviewer Comment:</p>
+                    <p className="review-label">Reviewer Comment:</p>
                     <p className="review-comment">{proposal.manualReview.comment}</p>
                   </div>
                 )}
